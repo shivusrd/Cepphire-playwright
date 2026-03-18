@@ -89,7 +89,8 @@ jobs:
 
     - name: Install Playwright browsers and dependencies
       run: |
-        mvn exec:java -Dexec.mainClass=com.microsoft.playwright.CLI -Dexec.args="install --with-deps"
+        # Install browsers using Maven with proper system dependencies
+        mvn exec:java -Dexec.mainClass=com.microsoft.playwright.CLI -Dexec.args="install chromium firefox webkit"
       shell: bash
 
     - name: Create test-output directory
