@@ -161,8 +161,17 @@ public class TestListener implements ITestListener {
                     String screenshotPath = captureScreenshot(baseTest.getPage(), testName);
                     
                     if (screenshotPath != null) {
-                        extentTest.addScreenCaptureFromPath(screenshotPath, 
-                                                           "Screenshot on failure");
+                        // Add screenshot with both path and base64 for better compatibility
+                        try {
+                            java.io.File screenshotFile = new java.io.File(screenshotPath);
+                            if (screenshotFile.exists()) {
+                                String base64Image = java.util.Base64.getEncoder().encodeToString(java.nio.file.Files.readAllBytes(screenshotFile.toPath()));
+                                extentTest.addScreenCaptureFromPath(screenshotPath, "Screenshot on failure");
+                                extentTest.info("<img src='data:image/png;base64," + base64Image + "' style='width:800px;height:auto;' alt='Screenshot on failure'/>");
+                            }
+                        } catch (Exception e) {
+                            extentTest.addScreenCaptureFromPath(screenshotPath, "Screenshot on failure");
+                        }
                     }
                 }
             } catch (Exception e) {
@@ -206,11 +215,18 @@ public class TestListener implements ITestListener {
                 String screenshotPath = Paths.get(SCREENSHOT_DIR, 
                                                 testName + "_" + timestamp + ".png").toString();
                 
+                // Ensure directory exists
+                java.io.File screenshotDir = new java.io.File(SCREENSHOT_DIR);
+                if (!screenshotDir.exists()) {
+                    screenshotDir.mkdirs();
+                }
+                
                 page.screenshot(new Page.ScreenshotOptions()
                         .setPath(Paths.get(screenshotPath))
                         .setFullPage(true));
                 
-                return screenshotPath;
+                // Convert to absolute path for Extent Reports
+                return new java.io.File(screenshotPath).getAbsolutePath();
             }
         } catch (Exception e) {
             // Silently handle screenshot errors
@@ -265,13 +281,30 @@ public class TestListener implements ITestListener {
                 String screenshotPath = Paths.get(SCREENSHOT_DIR, 
                                                 "manual_" + timestamp + ".png").toString();
                 
+                // Ensure directory exists
+                java.io.File screenshotDir = new java.io.File(SCREENSHOT_DIR);
+                if (!screenshotDir.exists()) {
+                    screenshotDir.mkdirs();
+                }
+                
                 page.screenshot(new Page.ScreenshotOptions()
                         .setPath(Paths.get(screenshotPath))
                         .setFullPage(true));
                 
                 ExtentTest extentTest = test.get();
                 if (extentTest != null) {
-                    extentTest.addScreenCaptureFromPath(screenshotPath, title);
+                    // Add screenshot with both path and base64 for better compatibility
+                    try {
+                        java.io.File screenshotFile = new java.io.File(screenshotPath);
+                        if (screenshotFile.exists()) {
+                            String absolutePath = screenshotFile.getAbsolutePath();
+                            String base64Image = java.util.Base64.getEncoder().encodeToString(java.nio.file.Files.readAllBytes(screenshotFile.toPath()));
+                            extentTest.addScreenCaptureFromPath(absolutePath, title);
+                            extentTest.info("<img src='data:image/png;base64," + base64Image + "' style='width:800px;height:auto;' alt='" + title + "'/>");
+                        }
+                    } catch (Exception e) {
+                        extentTest.addScreenCaptureFromPath(screenshotPath, title);
+                    }
                 }
             }
         } catch (Exception e) {
