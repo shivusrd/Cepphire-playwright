@@ -6,6 +6,7 @@ permissions:
   actions: read
 
 on:
+  # Manual trigger for on-demand testing
   workflow_dispatch:
     inputs:
       browser:
@@ -22,6 +23,12 @@ on:
         required: false
         default: true
         type: boolean
+  
+  # Scheduled triggers - 11:00 AM and 11:00 PM IST (5:30 UTC and 17:30 UTC)
+  # Cron expressions: 30 5 * * * (11 AM IST) and 30 17 * * * (11 PM IST)
+  schedule:
+    - cron: '30 5 * * *'  # 11:00 AM IST (5:30 UTC)
+    - cron: '30 17 * * *' # 11:00 PM IST (17:30 UTC)
 
 env:
   BASE_URL: ${{ secrets.BASE_URL || 'https://cepphire.com' }}
