@@ -1,19 +1,24 @@
 package com.cepphire.tests;
 
-import com.cepphire.base.BaseTest;
 import com.cepphire.pages.AuthPage;
 import com.cepphire.pages.DashboardPage;
-import com.cepphire.listeners.TestListener;
+import com.cepphire.base.BaseTest;
 import com.microsoft.playwright.*;
 import com.microsoft.playwright.options.AriaRole;
+import com.microsoft.playwright.options.LoadState;
 import org.testng.Assert;
 import org.testng.annotations.Test;
+import org.testng.annotations.Listeners;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.AfterMethod;
 import org.testng.asserts.SoftAssert;
-import java.io.IOException;
-import com.aventstack.extentreports.ExtentTest;
 import com.aventstack.extentreports.Status;
+import com.cepphire.listeners.TestListener;
+import com.aventstack.extentreports.ExtentTest;
+
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.nio.file.Paths;
 
 public class CepHireLoginFlowTest extends BaseTest {
     
@@ -146,27 +151,102 @@ public class CepHireLoginFlowTest extends BaseTest {
         
         boolean isDashboardVisible = false;
         try {
-            // Check if we're on the main page after login
-            String currentUrl = page.url();
-            boolean onMainPage = currentUrl.contains("cepphire.com") && !currentUrl.contains("/auth");
+            // Wait for page to fully load after login
+            extentTest.log(Status.INFO, "Waiting for page to fully load after login...");
             
-            // Check for dashboard indicators
-            boolean hasCandidatesText = page.getByText("candidates").first().isVisible();
-            boolean hasJobsText = page.getByText("jobs").first().isVisible();
-            boolean hasDashboardButton = page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Unified Dashboard")).isVisible();
-            boolean hasCandidatesTab = page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("CANDIDATES")).isVisible();
-            boolean hasNavigation = page.getByRole(AriaRole.NAVIGATION).isVisible();
-            boolean hasCredits = dashboardPage.isCreditsDisplayed();
+            // Wait for URL to settle and page to be stable
+            page.waitForLoadState(LoadState.NETWORKIDLE, new Page.WaitForLoadStateOptions().setTimeout(30000));
+            page.waitForTimeout(5000); // Additional wait for dynamic content
             
-            isDashboardVisible = onMainPage && (hasCandidatesText || hasJobsText || hasDashboardButton || 
-                               hasCandidatesTab || hasNavigation || hasCredits);
+            // Retry dashboard detection with multiple attempts
+            int maxRetries = 3;
+            boolean dashboardDetected = false;
+            
+            // Variables to store final detection results
+            boolean hasCandidatesText = false;
+            boolean hasJobsText = false;
+            boolean hasDashboardButton = false;
+            boolean hasCandidatesTab = false;
+            boolean hasNavigation = false;
+            boolean hasCredits = false;
+            
+            for (int attempt = 1; attempt <= maxRetries; attempt++) {
+                extentTest.log(Status.INFO, "Dashboard detection attempt " + attempt + " of " + maxRetries);
+                
+                // Check if we're on the main page after login
+                String currentUrl = page.url();
+                boolean onMainPage = currentUrl.contains("cepphire.com") && !currentUrl.contains("/auth");
+                
+                if (!onMainPage) {
+                    extentTest.log(Status.WARNING, "Still on auth page, waiting before retry...");
+                    page.waitForTimeout(3000);
+                    continue;
+                }
+                
+                // Wait for page to be ready
+                try {
+                    page.waitForLoadState(LoadState.DOMCONTENTLOADED, new Page.WaitForLoadStateOptions().setTimeout(10000));
+                } catch (Exception e) {
+                    extentTest.log(Status.WARNING, "DOM content load timeout, continuing...");
+                }
+                
+                // Check for dashboard indicators with better error handling
+                try {
+                    hasCandidatesText = page.getByText("candidates").first().isVisible();
+                } catch (Exception e) {
+                    extentTest.log(Status.INFO, "Candidates text not found: " + e.getMessage());
+                }
+                
+                try {
+                    hasJobsText = page.getByText("jobs").first().isVisible();
+                } catch (Exception e) {
+                    extentTest.log(Status.INFO, "Jobs text not found: " + e.getMessage());
+                }
+                
+                try {
+                    hasDashboardButton = page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Unified Dashboard")).isVisible();
+                } catch (Exception e) {
+                    extentTest.log(Status.INFO, "Dashboard button not found: " + e.getMessage());
+                }
+                
+                try {
+                    hasCandidatesTab = page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("CANDIDATES")).isVisible();
+                } catch (Exception e) {
+                    extentTest.log(Status.INFO, "Candidates tab not found: " + e.getMessage());
+                }
+                
+                try {
+                    hasNavigation = page.getByRole(AriaRole.NAVIGATION).isVisible();
+                } catch (Exception e) {
+                    extentTest.log(Status.INFO, "Navigation not found: " + e.getMessage());
+                }
+                
+                try {
+                    hasCredits = dashboardPage.isCreditsDisplayed();
+                } catch (Exception e) {
+                    extentTest.log(Status.INFO, "Credits not found: " + e.getMessage());
+                }
+                
+                // Check if any dashboard elements are found
+                dashboardDetected = onMainPage && (hasCandidatesText || hasJobsText || hasDashboardButton || 
+                                   hasCandidatesTab || hasNavigation || hasCredits);
+                
+                if (dashboardDetected) {
+                    extentTest.log(Status.PASS, "Dashboard elements detected on attempt " + attempt);
+                    isDashboardVisible = true;
+                    break;
+                } else {
+                    extentTest.log(Status.WARNING, "Dashboard not detected on attempt " + attempt + ", waiting before retry...");
+                    page.waitForTimeout(3000);
+                }
+            }
             
             softAssert.assertTrue(isDashboardVisible, "Dashboard should be displayed after login");
             
             if (isDashboardVisible) {
                 extentTest.log(Status.PASS, "Dashboard page displayed");
                 extentTest.info("<details><summary>Dashboard Detection Results</summary>" +
-                               "<br>• Current URL: " + currentUrl +
+                               "<br>• Current URL: " + page.url() +
                                "<br>• Candidates Text: " + (hasCandidatesText ? "Found" : "Not Found") +
                                "<br>• Jobs Text: " + (hasJobsText ? "Found" : "Not Found") +
                                "<br>• Dashboard Button: " + (hasDashboardButton ? "Found" : "Not Found") +
@@ -175,9 +255,10 @@ public class CepHireLoginFlowTest extends BaseTest {
                                "<br>• Credits: " + (hasCredits ? "Found" : "Not Found") +
                                "</details>");
             } else {
-                extentTest.log(Status.INFO, "Current URL: " + currentUrl);
-                extentTest.info("<details><summary>Dashboard Detection Results</summary>" +
-                               "<br>• Current URL: " + currentUrl +
+                extentTest.log(Status.FAIL, "Dashboard not displayed after " + maxRetries + " attempts");
+                extentTest.info("<details><summary>Final Dashboard Detection Results</summary>" +
+                               "<br>• Current URL: " + page.url() +
+                               "<br>• Page Title: " + page.title() +
                                "<br>• Candidates Text: " + (hasCandidatesText ? "Found" : "Not Found") +
                                "<br>• Jobs Text: " + (hasJobsText ? "Found" : "Not Found") +
                                "<br>• Dashboard Button: " + (hasDashboardButton ? "Found" : "Not Found") +
@@ -185,9 +266,22 @@ public class CepHireLoginFlowTest extends BaseTest {
                                "<br>• Navigation: " + (hasNavigation ? "Found" : "Not Found") +
                                "<br>• Credits: " + (hasCredits ? "Found" : "Not Found") +
                                "</details>");
+                
+                // Add screenshot for debugging
+                try {
+                    String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+                    String screenshotPath = "test-output/screenshots/dashboard_debug_" + timestamp + ".png";
+                    page.screenshot(new Page.ScreenshotOptions()
+                            .setPath(Paths.get(screenshotPath))
+                            .setFullPage(true));
+                    extentTest.info("Debug screenshot saved: " + screenshotPath);
+                } catch (Exception e) {
+                    extentTest.log(Status.WARNING, "Could not capture debug screenshot: " + e.getMessage());
+                }
             }
         } catch (Exception e) {
-            extentTest.log(Status.WARNING, "Dashboard detection error: " + e.getMessage());
+            extentTest.log(Status.FAIL, "Dashboard verification failed: " + e.getMessage());
+            softAssert.fail("Dashboard verification failed: " + e.getMessage());
         }
         
         if (isDashboardVisible) {
