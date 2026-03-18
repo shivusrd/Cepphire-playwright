@@ -105,7 +105,7 @@ public class CepHireLoginFlowTest extends BaseTest {
         
         try {
             extentTest.log(Status.INFO, "Entering admin credentials");
-            extentTest.info("Username: " + config.getProperty("default.username"));
+            extentTest.info("Username: " + System.getProperty("default.username", config.getProperty("default.username")));
             
             authPage.loginAsAdmin();
             extentTest.log(Status.PASS, "Credentials entered successfully");
@@ -114,6 +114,8 @@ public class CepHireLoginFlowTest extends BaseTest {
             page.waitForTimeout(3000);
             
             String currentUrl = page.url();
+            extentTest.log(Status.INFO, "Current URL after login: " + currentUrl);
+            
             boolean loginSuccess = !currentUrl.contains("/auth");
             softAssert.assertTrue(loginSuccess, "Should be redirected after login");
             
@@ -121,6 +123,18 @@ public class CepHireLoginFlowTest extends BaseTest {
                 extentTest.log(Status.PASS, "Login successful - redirected to: " + currentUrl);
             } else {
                 extentTest.log(Status.FAIL, "Login failed - still on auth page");
+                
+                // Additional debugging for failed login
+                try {
+                    boolean authPageStillVisible = authPage.isAuthPageDisplayed();
+                    extentTest.log(Status.INFO, "Auth page still visible: " + authPageStillVisible);
+                    
+                    if (authPageStillVisible) {
+                        extentTest.log(Status.WARNING, "Possible authentication failure - check credentials");
+                    }
+                } catch (Exception e) {
+                    extentTest.log(Status.WARNING, "Could not verify auth page state: " + e.getMessage());
+                }
             }
         } catch (Exception e) {
             extentTest.log(Status.FAIL, "Login execution failed: " + e.getMessage());

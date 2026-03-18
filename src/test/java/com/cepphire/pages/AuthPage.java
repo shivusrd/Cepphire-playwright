@@ -117,8 +117,13 @@ public class AuthPage {
      * Login with admin credentials
      */
     public void loginAsAdmin() {
-        String email = config.getProperty("default.username");
-        String password = config.getProperty("default.password");
+        // Get credentials from system properties (GitHub Actions) or fallback to config
+        String email = System.getProperty("default.username", config.getProperty("default.username"));
+        String password = System.getProperty("default.password", config.getProperty("default.password"));
+        
+        System.out.println("Login attempt with email: " + email);
+        System.out.println("Auth URL: " + config.getProperty("auth.url"));
+        
         login(email, password);
     }
     
