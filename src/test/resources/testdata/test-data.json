@@ -1,0 +1,111 @@
+{
+  "login": {
+    "valid": {
+      "admin": {
+        "username": "admin@ukg.com",
+        "password": "Shivu@srd1",
+        "expectedUrl": "/dashboard"
+      },
+      "superAdmin": {
+        "username": "superadmin@cepphire.com",
+        "password": "Admin@123",
+        "expectedUrl": "/dashboard"
+      }
+    },
+    "invalid": {
+      "wrongPassword": {
+        "username": "admin@ukg.com",
+        "password": "WrongPassword123",
+        "errorMessage": "Invalid credentials"
+      },
+      "wrongUsername": {
+        "username": "nonexistent@cepphire.com",
+        "password": "Shivu@srd1",
+        "errorMessage": "Invalid credentials"
+      },
+      "emptyFields": {
+        "username": "",
+        "password": "",
+        "errorMessage": "Username and password are required"
+      }
+    }
+  },
+  "organization": {
+    "valid": {
+      "techCompany": {
+        "name": "Tech Solutions Inc.",
+        "industry": "Technology",
+        "size": "50-100",
+        "description": "Leading technology solutions provider",
+        "website": "https://techsolutions.com",
+        "expectedStatus": "Pending Approval"
+      },
+      "healthcareCompany": {
+        "name": "Healthcare Plus",
+        "industry": "Healthcare",
+        "size": "100-500",
+        "description": "Comprehensive healthcare services",
+        "website": "https://healthcareplus.com",
+        "expectedStatus": "Pending Approval"
+      }
+    },
+    "invalid": {
+      "missingFields": {
+        "name": "",
+        "industry": "",
+        "size": "",
+        "description": "",
+        "website": "",
+        "errorMessage": "All fields are required"
+      },
+      "invalidWebsite": {
+        "name": "Test Company",
+        "industry": "Technology",
+        "size": "10-50",
+        "description": "Test description",
+        "website": "invalid-url",
+        "errorMessage": "Please enter a valid website URL"
+      }
+    }
+  },
+  "urls": {
+    "base": "http://localhost:3000",
+    "login": "/login",
+    "dashboard": "/dashboard",
+    "setupOrg": "/setup-org",
+    "profile": "/profile",
+    "settings": "/settings"
+  },
+  "timeouts": {
+    "short": 5000,
+    "medium": 10000,
+    "long": 30000,
+    "pageLoad": 60000
+  },
+  "selectors": {
+    "login": {
+      "usernameInput": "input[name='email']",
+      "passwordInput": "input[name='password']",
+      "loginButton": "button[type='submit']",
+      "errorMessage": ".error-message"
+    },
+    "setupOrg": {
+      "orgNameInput": "input[name='organizationName']",
+      "industrySelect": "select[name='industry']",
+      "sizeSelect": "select[name='companySize']",
+      "descriptionTextarea": "textarea[name='description']",
+      "websiteInput": "input[name='website']",
+      "submitButton": "button[type='submit']",
+      "pendingApprovalMessage": ".pending-approval",
+      "successMessage": ".success-message"
+    },
+    "dashboard": {
+      "welcomeMessage": ".welcome-message",
+      "orgStatus": ".organization-status",
+      "navigationMenu": ".navigation-menu",
+      "profileLink": "a[href='/profile']",
+      "settingsLink": "a[href='/settings']",
+      "logoutButton": "button[aria-label='Logout']"
+    }
+  }
+}
