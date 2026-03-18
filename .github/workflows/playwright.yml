@@ -83,7 +83,9 @@ jobs:
           libxrandr2 \
           libgbm1 \
           libxss1 \
-          libasound2
+          libasound2t64 \
+          libgtk-3-0 \
+          libxshmfence1
 
     - name: Install Playwright browsers and dependencies
       run: |
