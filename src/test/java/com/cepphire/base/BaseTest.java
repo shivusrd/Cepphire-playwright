@@ -32,12 +32,17 @@ public class BaseTest {
         config = ConfigReader.getProperties();
         testData = new JsonDataReader(config.getProperty("test.data.file.path"));
         
+        // Get system properties from GitHub Actions with fallbacks
+        String systemBrowser = System.getProperty("browser", browserName);
+        String systemHeadless = System.getProperty("headless", headless);
+        String systemBaseUrl = System.getProperty("base.url", config.getProperty("base.url"));
+        
         // Initialize Playwright
         playwright = Playwright.create();
         
-        // Browser configuration
-        BrowserType browserType = getBrowserType(browserName);
-        boolean isHeadless = headless != null && Boolean.parseBoolean(headless);
+        // Browser configuration - prioritize system properties
+        BrowserType browserType = getBrowserType(systemBrowser);
+        boolean isHeadless = Boolean.parseBoolean(systemHeadless);
         
         browser = browserType.launch(new BrowserType.LaunchOptions()
                 .setHeadless(isHeadless)
@@ -64,8 +69,14 @@ public class BaseTest {
                     .setSources(true));
         }
         
-        // Navigate to base URL
-        page.navigate(config.getProperty("base.url"));
+        // Navigate to base URL - prioritize system property
+        page.navigate(systemBaseUrl);
+        
+        // Log configuration for debugging
+        System.out.println("Browser Configuration:");
+        System.out.println("  Browser: " + systemBrowser);
+        System.out.println("  Headless: " + isHeadless);
+        System.out.println("  Base URL: " + systemBaseUrl);
     }
     
     @AfterMethod(alwaysRun = true)
