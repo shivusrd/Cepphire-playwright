@@ -246,8 +246,8 @@ public class CepHireLoginFlowTest extends BaseTest {
                 }
                 
                 try {
-                    // Check for credits display (reuse existing hasCredits variable)
-                    hasCredits = page.getByText("Credits").isVisible();
+                    // Check for credits display (use locator to find any element containing "Credits")
+                    hasCredits = page.locator("text=/\\d+\\s*Credits/").isVisible();
                     if (hasCredits) {
                         extentTest.log(Status.INFO, "Credits display found");
                     }
