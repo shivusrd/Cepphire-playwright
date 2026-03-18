@@ -170,6 +170,10 @@ public class CepHireLoginFlowTest extends BaseTest {
             boolean hasNavigation = false;
             boolean hasCredits = false;
             
+            // Variables for specific dashboard elements requested by user
+            boolean hasAdminName = false;
+            boolean hasUnifiedDashboard = false;
+            
             for (int attempt = 1; attempt <= maxRetries; attempt++) {
                 extentTest.log(Status.INFO, "Dashboard detection attempt " + attempt + " of " + maxRetries);
                 
@@ -230,39 +234,39 @@ public class CepHireLoginFlowTest extends BaseTest {
                     extentTest.log(Status.INFO, "Credits not found: " + e.getMessage());
                 }
                 
-                // Additional checks for SPA dashboard elements
+                // Check for specific dashboard elements requested by user
                 try {
-                    // Check for common dashboard elements that might be present
-                    boolean hasDashboardHeader = page.getByText("Dashboard").isVisible();
-                    if (hasDashboardHeader) {
-                        extentTest.log(Status.INFO, "Dashboard header found");
-                        dashboardDetected = true; // Set to true immediately
+                    // Check for admin email/name display
+                    hasAdminName = page.getByText("admin@ukg.com").isVisible();
+                    if (hasAdminName) {
+                        extentTest.log(Status.INFO, "Admin email found: admin@ukg.com");
                     }
                 } catch (Exception e) {
-                    extentTest.log(Status.INFO, "Dashboard header not found: " + e.getMessage());
+                    extentTest.log(Status.INFO, "Admin email not found: " + e.getMessage());
                 }
                 
                 try {
-                    // Check for user profile or menu
-                    boolean hasUserMenu = page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("User")).isVisible();
-                    if (hasUserMenu) {
-                        extentTest.log(Status.INFO, "User menu found");
-                        dashboardDetected = true; // Set to true immediately
+                    // Check for credits display (reuse existing hasCredits variable)
+                    hasCredits = page.getByText("Credits").isVisible();
+                    if (hasCredits) {
+                        extentTest.log(Status.INFO, "Credits display found");
                     }
                 } catch (Exception e) {
-                    extentTest.log(Status.INFO, "User menu not found: " + e.getMessage());
+                    extentTest.log(Status.INFO, "Credits display not found: " + e.getMessage());
                 }
                 
                 try {
-                    // Check for any navigation menu items
-                    boolean hasMenuItems = page.locator("nav a, .menu a, .navigation a").first().isVisible();
-                    if (hasMenuItems) {
-                        extentTest.log(Status.INFO, "Navigation menu items found");
-                        dashboardDetected = true; // Set to true immediately
+                    // Check for Unified Dashboard button
+                    hasUnifiedDashboard = page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Unified Dashboard")).isVisible();
+                    if (hasUnifiedDashboard) {
+                        extentTest.log(Status.INFO, "Unified Dashboard button found");
                     }
                 } catch (Exception e) {
-                    extentTest.log(Status.INFO, "Navigation menu items not found: " + e.getMessage());
+                    extentTest.log(Status.INFO, "Unified Dashboard button not found: " + e.getMessage());
                 }
+                
+                // Check if all required elements are present
+                dashboardDetected = hasAdminName && hasCredits && hasUnifiedDashboard;
                 
                 // Check if any dashboard elements are found
                 // For SPA applications, content is more reliable than URL
@@ -289,26 +293,20 @@ public class CepHireLoginFlowTest extends BaseTest {
             
             if (isDashboardVisible) {
                 extentTest.log(Status.PASS, "Dashboard page displayed");
-                extentTest.info("<details><summary>Dashboard Detection Results</summary>" +
+                extentTest.info("<details><summary>Dashboard Verification Results</summary>" +
                                "<br>• Current URL: " + page.url() +
-                               "<br>• Candidates Text: " + (hasCandidatesText ? "Found" : "Not Found") +
-                               "<br>• Jobs Text: " + (hasJobsText ? "Found" : "Not Found") +
-                               "<br>• Dashboard Button: " + (hasDashboardButton ? "Found" : "Not Found") +
-                               "<br>• Candidates Tab: " + (hasCandidatesTab ? "Found" : "Not Found") +
-                               "<br>• Navigation: " + (hasNavigation ? "Found" : "Not Found") +
+                               "<br>• Admin Email: " + (hasAdminName ? "Found (admin@ukg.com)" : "Not Found") +
                                "<br>• Credits: " + (hasCredits ? "Found" : "Not Found") +
+                               "<br>• Unified Dashboard Button: " + (hasUnifiedDashboard ? "Found" : "Not Found") +
                                "</details>");
             } else {
                 extentTest.log(Status.FAIL, "Dashboard not displayed after " + maxRetries + " attempts");
-                extentTest.info("<details><summary>Final Dashboard Detection Results</summary>" +
+                extentTest.info("<details><summary>Final Dashboard Verification Results</summary>" +
                                "<br>• Current URL: " + page.url() +
                                "<br>• Page Title: " + page.title() +
-                               "<br>• Candidates Text: " + (hasCandidatesText ? "Found" : "Not Found") +
-                               "<br>• Jobs Text: " + (hasJobsText ? "Found" : "Not Found") +
-                               "<br>• Dashboard Button: " + (hasDashboardButton ? "Found" : "Not Found") +
-                               "<br>• Candidates Tab: " + (hasCandidatesTab ? "Found" : "Not Found") +
-                               "<br>• Navigation: " + (hasNavigation ? "Found" : "Not Found") +
+                               "<br>• Admin Email: " + (hasAdminName ? "Found (admin@ukg.com)" : "Not Found") +
                                "<br>• Credits: " + (hasCredits ? "Found" : "Not Found") +
+                               "<br>• Unified Dashboard Button: " + (hasUnifiedDashboard ? "Found" : "Not Found") +
                                "</details>");
                 
                 // Add screenshot for debugging
