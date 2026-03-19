@@ -104,18 +104,38 @@ jobs:
     - name: Create test-output directory
       run: mkdir -p test-output/screenshots test-output/traces test-output/videos
 
+    - name: Set environment variables for CI
+      run: |
+        echo "CI=true" >> $GITHUB_ENV
+        echo "GITHUB_ACTIONS=true" >> $GITHUB_ENV
+        echo "HEADLESS=${{ github.event.inputs.headless || 'true' }}" >> $GITHUB_ENV
+        echo "DISPLAY=" >> $GITHUB_ENV
+        echo "Environment variables set:"
+        echo "  CI: true"
+        echo "  GITHUB_ACTIONS: true"
+        echo "  HEADLESS: ${{ github.event.inputs.headless || 'true' }}"
+        echo "  DISPLAY: (unset)"
+
     - name: Run Playwright Tests
       run: |
+        echo "Starting test execution with configuration:"
+        echo "  Browser: ${{ matrix.browser }}"
+        echo "  Headless: ${{ github.event.inputs.headless || 'true' }}"
+        echo "  Base URL: ${{ env.BASE_URL }}"
+        echo "  CI Environment: true"
+        echo ""
+        
         mvn test \
           -Dbrowser=${{ matrix.browser }} \
-          -Dheadless=true \
+          -Dheadless=${{ github.event.inputs.headless || 'true' }} \
           -Dbase.url=${{ env.BASE_URL }} \
           -Ddefault.username=${{ env.USER_EMAIL }} \
           -Ddefault.password=${{ env.USER_PASSWORD }} \
           -Dcapture.screenshot.on.failure=true \
           -Dcapture.trace=true \
           -Dextent.reporter.html.start=true \
-          -Dci.environment=true
+          -Dci.environment=true \
+          -X
       continue-on-error: true
       shell: bash
 

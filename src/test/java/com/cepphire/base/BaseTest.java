@@ -38,6 +38,27 @@ public class BaseTest {
         String systemHeadless = System.getProperty("headless", headless);
         String systemBaseUrl = System.getProperty("base.url", config.getProperty("base.url"));
         
+        // Auto-detect headless mode for CI/CD environments
+        if (systemHeadless.equals("false")) {
+            // Check if we're in a headless environment (GitHub Actions, Jenkins, etc.)
+            String ciEnvironment = System.getenv("CI");
+            String githubActions = System.getenv("GITHUB_ACTIONS");
+            String display = System.getenv("DISPLAY");
+            
+            System.out.println("Environment Detection Debug:");
+            System.out.println("  CI env: " + ciEnvironment);
+            System.out.println("  GITHUB_ACTIONS env: " + githubActions);
+            System.out.println("  DISPLAY env: " + display);
+            System.out.println("  Original headless setting: " + systemHeadless);
+            
+            if (ciEnvironment != null || githubActions != null || display == null) {
+                System.out.println("CI/CD environment detected, forcing headless mode");
+                systemHeadless = "true";
+            }
+        } else {
+            System.out.println("Headless mode already set to: " + systemHeadless);
+        }
+        
         // Initialize Playwright
         playwright = Playwright.create();
         
@@ -49,10 +70,28 @@ public class BaseTest {
                 .setHeadless(isHeadless)
                 .setSlowMo(100));
         
-        // Browser context configuration - maximize to screen size
-        Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-        int screenWidth = (int) screenSize.getWidth();
-        int screenHeight = (int) screenSize.getHeight();
+        // Browser context configuration - handle headless vs headful
+        int screenWidth, screenHeight;
+        
+        if (Boolean.parseBoolean(systemHeadless)) {
+            // Use default desktop resolution for headless mode
+            screenWidth = 1920;
+            screenHeight = 1080;
+            System.out.println("Using default desktop resolution for headless mode: " + screenWidth + "x" + screenHeight);
+        } else {
+            // Get actual screen size for headful mode - only if not headless
+            try {
+                Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+                screenWidth = (int) screenSize.getWidth();
+                screenHeight = (int) screenSize.getHeight();
+                System.out.println("Using actual screen resolution: " + screenWidth + "x" + screenHeight);
+            } catch (Exception e) {
+                // Fallback to default if screen detection fails
+                screenWidth = 1920;
+                screenHeight = 1080;
+                System.out.println("Screen detection failed, using default resolution: " + screenWidth + "x" + screenHeight);
+            }
+        }
         
         context = browser.newContext(new Browser.NewContextOptions()
                 .setViewportSize(screenWidth, screenHeight)
@@ -77,10 +116,10 @@ public class BaseTest {
         // Log configuration for debugging
         System.out.println("Browser Configuration:");
         System.out.println("  Browser: " + systemBrowser);
-        System.out.println("  Headless: " + isHeadless);
+        System.out.println("  Headless: " + systemHeadless);
         System.out.println("  Base URL: " + systemBaseUrl);
         System.out.println("  Screen Resolution: " + screenWidth + "x" + screenHeight);
-        System.out.println("  Viewport: Maximized to screen size");
+        System.out.println("  Environment: " + (System.getenv("GITHUB_ACTIONS") != null ? "GitHub Actions" : "Local"));
     }
     
     @AfterMethod(alwaysRun = true)
