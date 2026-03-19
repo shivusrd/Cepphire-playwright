@@ -118,16 +118,14 @@ public class CepHireLoginFlowTest extends BaseTest {
             page.waitForLoadState();
             page.waitForTimeout(3000);
             
-            String currentUrl = page.url();
-            extentTest.log(Status.INFO, "Current URL after login: " + currentUrl);
-            
-            boolean loginSuccess = !currentUrl.contains("/auth");
-            softAssert.assertTrue(loginSuccess, "Should be redirected after login");
+            // Login successful - check for dashboard content instead of URL
+            boolean loginSuccess = dashboardPage.isDashboardPageDisplayed();
+            softAssert.assertTrue(loginSuccess, "Should be redirected to dashboard after login");
             
             if (loginSuccess) {
-                extentTest.log(Status.PASS, "Login successful - redirected to: " + currentUrl);
+                extentTest.log(Status.PASS, "Login successful - dashboard content detected");
             } else {
-                extentTest.log(Status.FAIL, "Login failed - still on auth page");
+                extentTest.log(Status.FAIL, "Login failed - dashboard not detected");
                 
                 // Additional debugging for failed login
                 try {
@@ -294,7 +292,6 @@ public class CepHireLoginFlowTest extends BaseTest {
             if (isDashboardVisible) {
                 extentTest.log(Status.PASS, "Dashboard page displayed");
                 extentTest.info("<details><summary>Dashboard Verification Results</summary>" +
-                               "<br>• Current URL: " + page.url() +
                                "<br>• Admin Email: " + (hasAdminName ? "Found (admin@ukg.com)" : "Not Found") +
                                "<br>• Credits: " + (hasCredits ? "Found" : "Not Found") +
                                "<br>• Unified Dashboard Button: " + (hasUnifiedDashboard ? "Found" : "Not Found") +
@@ -302,21 +299,16 @@ public class CepHireLoginFlowTest extends BaseTest {
             } else {
                 extentTest.log(Status.FAIL, "Dashboard not displayed after " + maxRetries + " attempts");
                 extentTest.info("<details><summary>Final Dashboard Verification Results</summary>" +
-                               "<br>• Current URL: " + page.url() +
                                "<br>• Page Title: " + page.title() +
                                "<br>• Admin Email: " + (hasAdminName ? "Found (admin@ukg.com)" : "Not Found") +
                                "<br>• Credits: " + (hasCredits ? "Found" : "Not Found") +
                                "<br>• Unified Dashboard Button: " + (hasUnifiedDashboard ? "Found" : "Not Found") +
                                "</details>");
                 
-                // Add screenshot for debugging
+                // Add clickable thumbnail screenshot for debugging
                 try {
-                    String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
-                    String screenshotPath = "test-output/screenshots/dashboard_debug_" + timestamp + ".png";
-                    page.screenshot(new Page.ScreenshotOptions()
-                            .setPath(Paths.get(screenshotPath))
-                            .setFullPage(true));
-                    extentTest.info("Debug screenshot saved: " + screenshotPath);
+                    TestListener.addScreenshot(page, "Login Failed - Debug Screenshot");
+                    extentTest.info("📸 Debug screenshot captured - click thumbnail to view full size");
                 } catch (Exception e) {
                     extentTest.log(Status.WARNING, "Could not capture debug screenshot: " + e.getMessage());
                 }
@@ -447,10 +439,10 @@ public class CepHireLoginFlowTest extends BaseTest {
             page.waitForLoadState();
             page.waitForTimeout(3000);
             
-            String currentUrl = page.url();
-            boolean loginSuccess = !currentUrl.contains("/auth");
-            softAssert.assertTrue(loginSuccess, "Should be redirected after login");
-            System.out.println("Login successful - redirected to: " + currentUrl);
+            // Login successful - check for dashboard content instead of URL
+            boolean loginSuccess = dashboardPage.isDashboardPageDisplayed();
+            softAssert.assertTrue(loginSuccess, "Should be redirected to dashboard after login");
+            System.out.println("Login successful - dashboard content detected");
             
             // Dashboard Verification
             boolean isDashboardVisible = dashboardPage.isDashboardPageDisplayed();

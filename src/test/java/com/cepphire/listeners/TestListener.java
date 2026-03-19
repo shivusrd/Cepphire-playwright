@@ -137,6 +137,39 @@ public class TestListener implements ITestListener {
         if (extentTest != null) {
             extentTest.log(Status.PASS, "Test executed successfully");
             
+            // Capture screenshot for successful tests as well
+            try {
+                Object testInstance = result.getInstance();
+                if (testInstance instanceof BaseTest) {
+                    BaseTest baseTest = (BaseTest) testInstance;
+                    String testName = result.getMethod().getMethodName();
+                    String screenshotPath = captureScreenshot(baseTest.getPage(), testName + "_SUCCESS");
+                    
+                    if (screenshotPath != null) {
+                        // Add screenshot with clickable thumbnail for successful tests
+                        try {
+                            java.io.File screenshotFile = new java.io.File(screenshotPath);
+                            if (screenshotFile.exists()) {
+                                String base64Image = java.util.Base64.getEncoder().encodeToString(java.nio.file.Files.readAllBytes(screenshotFile.toPath()));
+                                extentTest.addScreenCaptureFromPath(screenshotPath, "Screenshot on success");
+                                extentTest.info("<div style='margin: 10px 0;'>" +
+                                    "<a href='data:image/png;base64," + base64Image + "' target='_blank'>" +
+                                    "<img src='data:image/png;base64," + base64Image + "' " +
+                                    "style='width:200px;height:auto;border:2px solid #28a745;border-radius:5px;cursor:pointer;' " +
+                                    "alt='Screenshot on success' title='Click to view full size'/>" +
+                                    "</a><br/>" +
+                                    "<small style='color:#28a745;'>✅ Click thumbnail to view successful test screenshot</small>" +
+                                    "</div>");
+                            }
+                        } catch (Exception e) {
+                            extentTest.addScreenCaptureFromPath(screenshotPath, "Screenshot on success");
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                extentTest.info("Could not capture success screenshot: " + e.getMessage());
+            }
+            
             // Add execution time
             long duration = result.getEndMillis() - result.getStartMillis();
             extentTest.info("Test execution time: " + duration + " ms");
@@ -167,7 +200,14 @@ public class TestListener implements ITestListener {
                             if (screenshotFile.exists()) {
                                 String base64Image = java.util.Base64.getEncoder().encodeToString(java.nio.file.Files.readAllBytes(screenshotFile.toPath()));
                                 extentTest.addScreenCaptureFromPath(screenshotPath, "Screenshot on failure");
-                                extentTest.info("<img src='data:image/png;base64," + base64Image + "' style='width:800px;height:auto;' alt='Screenshot on failure'/>");
+                                extentTest.info("<div style='margin: 10px 0;'>" +
+                                    "<a href='data:image/png;base64," + base64Image + "' target='_blank'>" +
+                                    "<img src='data:image/png;base64," + base64Image + "' " +
+                                    "style='width:200px;height:auto;border:2px solid #ddd;border-radius:5px;cursor:pointer;' " +
+                                    "alt='Screenshot on failure' title='Click to view full size'/>" +
+                                    "</a><br/>" +
+                                    "<small style='color:#666;'>📸 Click thumbnail to view full-size screenshot</small>" +
+                                    "</div>");
                             }
                         } catch (Exception e) {
                             extentTest.addScreenCaptureFromPath(screenshotPath, "Screenshot on failure");
@@ -211,6 +251,7 @@ public class TestListener implements ITestListener {
     private String captureScreenshot(Page page, String testName) {
         try {
             if (page != null) {
+                // Don't set viewport size here - BaseTest already maximizes it
                 String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
                 String screenshotPath = Paths.get(SCREENSHOT_DIR, 
                                                 testName + "_" + timestamp + ".png").toString();
@@ -277,6 +318,7 @@ public class TestListener implements ITestListener {
     public static void addScreenshot(Page page, String title) {
         try {
             if (page != null) {
+                // Don't set viewport size here - BaseTest already maximizes it
                 String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
                 String screenshotPath = Paths.get(SCREENSHOT_DIR, 
                                                 "manual_" + timestamp + ".png").toString();
@@ -300,7 +342,14 @@ public class TestListener implements ITestListener {
                             String absolutePath = screenshotFile.getAbsolutePath();
                             String base64Image = java.util.Base64.getEncoder().encodeToString(java.nio.file.Files.readAllBytes(screenshotFile.toPath()));
                             extentTest.addScreenCaptureFromPath(absolutePath, title);
-                            extentTest.info("<img src='data:image/png;base64," + base64Image + "' style='width:800px;height:auto;' alt='" + title + "'/>");
+                            extentTest.info("<div style='margin: 10px 0;'>" +
+                                "<a href='data:image/png;base64," + base64Image + "' target='_blank'>" +
+                                "<img src='data:image/png;base64," + base64Image + "' " +
+                                "style='width:200px;height:auto;border:2px solid #ddd;border-radius:5px;cursor:pointer;' " +
+                                "alt='" + title + "' title='Click to view full size'/>" +
+                                "</a><br/>" +
+                                "<small style='color:#666;'>📸 Click thumbnail to view full-size screenshot</small>" +
+                                "</div>");
                         }
                     } catch (Exception e) {
                         extentTest.addScreenCaptureFromPath(screenshotPath, title);

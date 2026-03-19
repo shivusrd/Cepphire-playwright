@@ -9,6 +9,7 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Parameters;
 import org.testng.annotations.Optional;
 
+import java.awt.*;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.Properties;
@@ -48,12 +49,13 @@ public class BaseTest {
                 .setHeadless(isHeadless)
                 .setSlowMo(100));
         
-        // Browser context configuration
+        // Browser context configuration - maximize to screen size
+        Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+        int screenWidth = (int) screenSize.getWidth();
+        int screenHeight = (int) screenSize.getHeight();
+        
         context = browser.newContext(new Browser.NewContextOptions()
-                .setViewportSize(
-                        Integer.parseInt(config.getProperty("viewport.width", "1280")),
-                        Integer.parseInt(config.getProperty("viewport.height", "720"))
-                )
+                .setViewportSize(screenWidth, screenHeight)
                 .setIgnoreHTTPSErrors(true)
                 .setAcceptDownloads(true));
         
@@ -77,6 +79,8 @@ public class BaseTest {
         System.out.println("  Browser: " + systemBrowser);
         System.out.println("  Headless: " + isHeadless);
         System.out.println("  Base URL: " + systemBaseUrl);
+        System.out.println("  Screen Resolution: " + screenWidth + "x" + screenHeight);
+        System.out.println("  Viewport: Maximized to screen size");
     }
     
     @AfterMethod(alwaysRun = true)
