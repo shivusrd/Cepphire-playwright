@@ -66,9 +66,12 @@ public class BaseTest {
         BrowserType browserType = getBrowserType(systemBrowser);
         boolean isHeadless = Boolean.parseBoolean(systemHeadless);
         
+        // Adjust slowMo based on headless mode - slower for headless to allow proper rendering
+        int slowMoTime = isHeadless ? 200 : 100; // Slower in headless mode
+        
         browser = browserType.launch(new BrowserType.LaunchOptions()
                 .setHeadless(isHeadless)
-                .setSlowMo(100));
+                .setSlowMo(slowMoTime));
         
         // Browser context configuration - handle headless vs headful
         int screenWidth, screenHeight;

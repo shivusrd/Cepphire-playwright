@@ -30,19 +30,80 @@ public class DashboardPage {
     }
     
     /**
-     * Check if dashboard page is displayed - enhanced with multiple indicators
+     * Check if dashboard page is displayed - enhanced with multiple indicators and headless debugging
      */
     public boolean isDashboardPageDisplayed() {
-        // Check for various dashboard indicators - use first() to avoid strict mode violations
-        boolean hasCandidatesText = page.getByText("candidates").first().isVisible();
-        boolean hasJobsText = page.getByText("jobs").first().isVisible();
-        boolean hasDashboardButton = page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Unified Dashboard")).isVisible();
-        boolean hasCandidatesTab = page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("CANDIDATES")).isVisible();
-        boolean hasJobsTab = page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("JOBS")).isVisible();
-        boolean hasNavigation = page.getByRole(AriaRole.NAVIGATION).isVisible();
-        
-        return hasCandidatesText || hasJobsText || hasDashboardButton || 
-               hasCandidatesTab || hasJobsTab || hasNavigation;
+        try {
+            // Add debugging for headless mode
+            String currentUrl = page.url();
+            String pageTitle = page.title();
+            
+            System.out.println("Dashboard Detection Debug:");
+            System.out.println("  Current URL: " + currentUrl);
+            System.out.println("  Page Title: " + pageTitle);
+            
+            // Check for various dashboard indicators - use first() to avoid strict mode violations
+            // Add individual debugging for each element
+            boolean hasCandidatesText = false;
+            boolean hasJobsText = false;
+            boolean hasDashboardButton = false;
+            boolean hasCandidatesTab = false;
+            boolean hasJobsTab = false;
+            boolean hasNavigation = false;
+            
+            try {
+                hasCandidatesText = page.getByText("candidates").first().isVisible();
+                System.out.println("  Candidates text: " + hasCandidatesText);
+            } catch (Exception e) {
+                System.out.println("  Candidates text: Error - " + e.getMessage());
+            }
+            
+            try {
+                hasJobsText = page.getByText("jobs").first().isVisible();
+                System.out.println("  Jobs text: " + hasJobsText);
+            } catch (Exception e) {
+                System.out.println("  Jobs text: Error - " + e.getMessage());
+            }
+            
+            try {
+                hasDashboardButton = page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Unified Dashboard")).isVisible();
+                System.out.println("  Dashboard button: " + hasDashboardButton);
+            } catch (Exception e) {
+                System.out.println("  Dashboard button: Error - " + e.getMessage());
+            }
+            
+            try {
+                hasCandidatesTab = page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("CANDIDATES")).isVisible();
+                System.out.println("  Candidates tab: " + hasCandidatesTab);
+            } catch (Exception e) {
+                System.out.println("  Candidates tab: Error - " + e.getMessage());
+            }
+            
+            try {
+                hasJobsTab = page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("JOBS")).isVisible();
+                System.out.println("  Jobs tab: " + hasJobsTab);
+            } catch (Exception e) {
+                System.out.println("  Jobs tab: Error - " + e.getMessage());
+            }
+            
+            try {
+                hasNavigation = page.getByRole(AriaRole.NAVIGATION).isVisible();
+                System.out.println("  Navigation: " + hasNavigation);
+            } catch (Exception e) {
+                System.out.println("  Navigation: Error - " + e.getMessage());
+            }
+            
+            boolean result = hasCandidatesText || hasJobsText || hasDashboardButton || 
+                           hasCandidatesTab || hasJobsTab || hasNavigation;
+            
+            System.out.println("  Final result: " + result);
+            
+            return result;
+            
+        } catch (Exception e) {
+            System.out.println("Dashboard detection failed: " + e.getMessage());
+            return false;
+        }
     }
     
     /**

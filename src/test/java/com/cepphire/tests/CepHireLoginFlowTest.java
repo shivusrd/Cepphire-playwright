@@ -115,8 +115,15 @@ public class CepHireLoginFlowTest extends BaseTest {
             authPage.loginAsAdmin();
             extentTest.log(Status.PASS, "Credentials entered successfully");
             
+            // Enhanced waiting for headless mode
+            extentTest.log(Status.INFO, "Waiting for login processing...");
             page.waitForLoadState();
-            page.waitForTimeout(3000);
+            page.waitForTimeout(5000); // Increased wait for headless mode
+            
+            // Debug current state after login
+            String currentUrl = page.url();
+            String pageTitle = page.title();
+            extentTest.log(Status.INFO, "Post-login state - URL: " + currentUrl + ", Title: " + pageTitle);
             
             // Login successful - check for dashboard content instead of URL
             boolean loginSuccess = dashboardPage.isDashboardPageDisplayed();
@@ -127,14 +134,38 @@ public class CepHireLoginFlowTest extends BaseTest {
             } else {
                 extentTest.log(Status.FAIL, "Login failed - dashboard not detected");
                 
-                // Additional debugging for failed login
+                // Enhanced debugging for failed login
                 try {
                     boolean authPageStillVisible = authPage.isAuthPageDisplayed();
                     extentTest.log(Status.INFO, "Auth page still visible: " + authPageStillVisible);
                     
+                    // Add page content debugging for headless mode
+                    String pageContent = page.content();
+                    extentTest.log(Status.INFO, "Page content length: " + pageContent.length());
+                    
                     if (authPageStillVisible) {
                         extentTest.log(Status.WARNING, "Possible authentication failure - check credentials");
+                        
+                        // Check for error messages
+                        try {
+                            boolean hasError = page.locator("text=/error|invalid|failed/i").isVisible();
+                            if (hasError) {
+                                String errorMsg = page.locator("text=/error|invalid|failed/i").first().textContent();
+                                extentTest.log(Status.WARNING, "Error message found: " + errorMsg);
+                            }
+                        } catch (Exception e) {
+                            extentTest.log(Status.INFO, "No error messages detected");
+                        }
                     }
+                    
+                    // Add screenshot for debugging
+                    try {
+                        TestListener.addScreenshot(page, "Login Failed - Debug Screenshot");
+                        extentTest.info("📸 Debug screenshot captured - click thumbnail to view full size");
+                    } catch (Exception e) {
+                        extentTest.log(Status.WARNING, "Could not capture debug screenshot: " + e.getMessage());
+                    }
+                    
                 } catch (Exception e) {
                     extentTest.log(Status.WARNING, "Could not verify auth page state: " + e.getMessage());
                 }
