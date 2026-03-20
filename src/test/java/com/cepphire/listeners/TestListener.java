@@ -39,6 +39,46 @@ public class TestListener implements ITestListener {
         sparkReporter.config().setEncoding("UTF-8");
         sparkReporter.config().setTimeStampFormat("EEEE, MMMM dd, yyyy, hh:mm a '('zzz')'");
         
+        // Add custom CSS for better screenshot viewing
+        sparkReporter.config().setCss(".screenshot-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 9999; display: none; cursor: pointer; } " +
+                                       ".screenshot-modal img { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); max-width: 95%; max-height: 95%; border: 3px solid #fff; border-radius: 8px; } " +
+                                       ".screenshot-modal .close-btn { position: absolute; top: 20px; right: 40px; color: #fff; font-size: 40px; font-weight: bold; cursor: pointer; z-index: 10000; } " +
+                                       ".screenshot-thumb { cursor: pointer; transition: transform 0.2s; } " +
+                                       ".screenshot-thumb:hover { transform: scale(1.05); } ");
+        
+        // Add custom JavaScript for modal functionality
+        sparkReporter.config().setJs("function createScreenshotModal() { " +
+                                   "  const modal = document.createElement('div'); " +
+                                   "  modal.className = 'screenshot-modal'; " +
+                                   "  modal.innerHTML = '<span class=\"close-btn\">&times;</span><img src=\"\" alt=\"Screenshot\">'; " +
+                                   "  document.body.appendChild(modal); " +
+                                   "  " +
+                                   "  modal.addEventListener('click', function() { " +
+                                   "    modal.style.display = 'none'; " +
+                                   "  }); " +
+                                   "  " +
+                                   "  modal.querySelector('.close-btn').addEventListener('click', function(e) { " +
+                                   "    e.stopPropagation(); " +
+                                   "    modal.style.display = 'none'; " +
+                                   "  }); " +
+                                   "  " +
+                                   "  return modal; " +
+                                   "} " +
+                                   "" +
+                                   "function showScreenshotInModal(imageSrc) { " +
+                                   "  let modal = document.querySelector('.screenshot-modal'); " +
+                                   "  if (!modal) { " +
+                                   "    modal = createScreenshotModal(); " +
+                                   "  } " +
+                                   "  modal.querySelector('img').src = imageSrc; " +
+                                   "  modal.style.display = 'block'; " +
+                                   "} " +
+                                   "" +
+                                   "// Initialize modal when page loads " +
+                                   "document.addEventListener('DOMContentLoaded', function() { " +
+                                   "  createScreenshotModal(); " +
+                                   "});");
+        
         extent = new ExtentReports();
         extent.attachReporter(sparkReporter);
         
@@ -153,13 +193,13 @@ public class TestListener implements ITestListener {
                                 String base64Image = java.util.Base64.getEncoder().encodeToString(java.nio.file.Files.readAllBytes(screenshotFile.toPath()));
                                 extentTest.addScreenCaptureFromPath(screenshotPath, "Screenshot on success");
                                 extentTest.info("<div style='margin: 10px 0;'>" +
-                                    "<a href='data:image/png;base64," + base64Image + "' target='_blank'>" +
                                     "<img src='data:image/png;base64," + base64Image + "' " +
+                                    "onclick='showScreenshotInModal(\"data:image/png;base64," + base64Image + "\")' " +
                                     "style='width:200px;height:auto;border:2px solid #28a745;border-radius:5px;cursor:pointer;' " +
+                                    "class='screenshot-thumb' " +
                                     "alt='Screenshot on success' title='Click to view full size'/>" +
-                                    "</a><br/>" +
-                                    "<small style='color:#28a745;'>✅ Click thumbnail to view successful test screenshot</small>" +
-                                    "</div>");
+                                    "</div><br/>" +
+                                    "<small style='color:#28a745;'>✅ Click thumbnail to view full-size screenshot (opens in same window)</small>");
                             }
                         } catch (Exception e) {
                             extentTest.addScreenCaptureFromPath(screenshotPath, "Screenshot on success");
@@ -201,13 +241,13 @@ public class TestListener implements ITestListener {
                                 String base64Image = java.util.Base64.getEncoder().encodeToString(java.nio.file.Files.readAllBytes(screenshotFile.toPath()));
                                 extentTest.addScreenCaptureFromPath(screenshotPath, "Screenshot on failure");
                                 extentTest.info("<div style='margin: 10px 0;'>" +
-                                    "<a href='data:image/png;base64," + base64Image + "' target='_blank'>" +
                                     "<img src='data:image/png;base64," + base64Image + "' " +
+                                    "onclick='showScreenshotInModal(\"data:image/png;base64," + base64Image + "\")' " +
                                     "style='width:200px;height:auto;border:2px solid #ddd;border-radius:5px;cursor:pointer;' " +
+                                    "class='screenshot-thumb' " +
                                     "alt='Screenshot on failure' title='Click to view full size'/>" +
-                                    "</a><br/>" +
-                                    "<small style='color:#666;'>📸 Click thumbnail to view full-size screenshot</small>" +
-                                    "</div>");
+                                    "</div><br/>" +
+                                    "<small style='color:#666;'>📸 Click thumbnail to view full-size screenshot (opens in same window)</small>");
                             }
                         } catch (Exception e) {
                             extentTest.addScreenCaptureFromPath(screenshotPath, "Screenshot on failure");
@@ -343,13 +383,13 @@ public class TestListener implements ITestListener {
                             String base64Image = java.util.Base64.getEncoder().encodeToString(java.nio.file.Files.readAllBytes(screenshotFile.toPath()));
                             extentTest.addScreenCaptureFromPath(absolutePath, title);
                             extentTest.info("<div style='margin: 10px 0;'>" +
-                                "<a href='data:image/png;base64," + base64Image + "' target='_blank'>" +
                                 "<img src='data:image/png;base64," + base64Image + "' " +
+                                "onclick='showScreenshotInModal(\"data:image/png;base64," + base64Image + "\")' " +
                                 "style='width:200px;height:auto;border:2px solid #ddd;border-radius:5px;cursor:pointer;' " +
+                                "class='screenshot-thumb' " +
                                 "alt='" + title + "' title='Click to view full size'/>" +
-                                "</a><br/>" +
-                                "<small style='color:#666;'>📸 Click thumbnail to view full-size screenshot</small>" +
-                                "</div>");
+                                "</div><br/>" +
+                                "<small style='color:#666;'>📸 Click thumbnail to view full-size screenshot (opens in same window)</small>");
                         }
                     } catch (Exception e) {
                         extentTest.addScreenCaptureFromPath(screenshotPath, title);
