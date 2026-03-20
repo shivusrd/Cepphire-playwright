@@ -567,7 +567,6 @@ jobs:
       success() && 
       github.ref == 'refs/heads/main' && 
       github.event_name == 'push' &&
-      (github.event.inputs.enable_security_scans != 'false' || github.event.inputs.enable_security_scans == 'true') &&
       (
         (needs.test-parallel.result == 'success' || needs.test-parallel.result == 'skipped') &&
         (needs.test-sequential.result == 'success' || needs.test-sequential.result == 'skipped') &&
