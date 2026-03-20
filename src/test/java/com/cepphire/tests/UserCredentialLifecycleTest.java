@@ -3,6 +3,7 @@ package com.cepphire.tests;
 import com.cepphire.pages.UserLifecyclePage;
 import com.cepphire.base.BaseTest;
 import com.cepphire.utils.JsonDataReader;
+import com.cepphire.utils.DynamicTestDataGenerator;
 import org.testng.annotations.Test;
 import org.testng.annotations.Listeners;
 import org.testng.annotations.BeforeMethod;
@@ -37,13 +38,28 @@ public class UserCredentialLifecycleTest extends BaseTest {
     @Test(description = "Complete user credential lifecycle - Issue, Initialize, and Revoke", 
           groups = {"users", "lifecycle", "regression"})
     public void testUserCredentialLifecycle() {
-        // Get test data
+        // Get browser name from system property or default to chromium
+        String browserName = System.getProperty("browser", "chromium");
+        
+        // Generate unique test data for this browser to avoid conflicts
+        DynamicTestDataGenerator.UniqueUserData uniqueRecruiter = 
+            DynamicTestDataGenerator.createUniqueRecruiterData(browserName);
+        
+        // Get admin credentials (fixed - admin credentials are usually static)
         String adminEmail = testData.getUsername("admin01");
         String adminPassword = testData.getPassword("admin01");
-        String testUserEmail = testData.getUserEmail("testRecruiter");
-        String testUserPassword = testData.getUserPassword("testRecruiter");
+        
+        // Use unique recruiter data
+        String testUserEmail = uniqueRecruiter.email;
+        String testUserPassword = testData.getUserPassword("testRecruiter"); // Keep password consistent
         String testUserRole = testData.getUserRole("testRecruiter");
-        String testUserDisplayName = testData.getUserDisplayName("testRecruiter");
+        String testUserDisplayName = uniqueRecruiter.displayName;
+        
+        // Log the unique test data for debugging
+        System.out.println("🔄 Dynamic Test Data Generated for " + browserName + ":");
+        System.out.println("  Email: " + testUserEmail);
+        System.out.println("  Display Name: " + testUserDisplayName);
+        System.out.println("  Unique ID: " + uniqueRecruiter.uniqueId);
         
         // Execute the complete user credential lifecycle
         UserLifecyclePage.LifecycleResult result = userLifecyclePage.executeUserCredentialLifecycle(
@@ -61,6 +77,7 @@ public class UserCredentialLifecycleTest extends BaseTest {
         System.out.println("✅ Phase 1 - Issue credentials: " + (result.issueSuccess ? "PASSED" : "FAILED"));
         System.out.println("✅ Phase 2 - User initialization: " + (result.initSuccess ? "PASSED" : "FAILED"));
         System.out.println("✅ Phase 3 - Revoke access: " + (result.revokeSuccess ? "PASSED" : "FAILED"));
+        System.out.println("🎯 Unique test data used: " + uniqueRecruiter.uniqueId);
     }
     
     @AfterMethod
