@@ -15,9 +15,9 @@
         </classes>
     </test>
     
-    <!-- Test 2: User Credential Lifecycle in Firefox -->
-    <test name="User Credential Lifecycle Test - Firefox">
-        <parameter name="browser" value="firefox"/>
+    <!-- Test 2: User Credential Lifecycle in Chromium -->
+    <test name="User Credential Lifecycle Test - Chromium">
+        <parameter name="browser" value="chromium"/>
         <parameter name="headless" value="false"/>
         <classes>
             <class name="com.cepphire.tests.UserCredentialLifecycleTest">

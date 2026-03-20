@@ -33,7 +33,11 @@ public class ManageUsersPage {
      * Select role for user (recruiter, candidate, etc.)
      */
     public void selectRole(String role) {
+        // First click to open the dropdown (complementary button)
         page.getByRole(AriaRole.COMPLEMENTARY).getByRole(AriaRole.BUTTON, new Locator.GetByRoleOptions().setName(role)).click();
+        
+        // Second click to select the specific role option (nth(1) selects the second matching element)
+        page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName(role)).nth(1).click();
     }
     
     /**

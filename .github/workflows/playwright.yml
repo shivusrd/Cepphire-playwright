@@ -23,7 +23,23 @@ on:
         required: false
         default: true
         type: boolean
+      test_class:
+        description: 'Specific test class to run (optional)'
+        required: false
+        default: ''
+        type: string
+      test_method:
+        description: 'Specific test method to run (optional)'
+        required: false
+        default: ''
+        type: string
   
+  # Automatic triggers
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
   # Scheduled triggers - 11:00 AM and 11:00 PM IST (5:30 UTC and 17:30 UTC)
   # Cron expressions: 30 5 * * * (11 AM IST) and 30 17 * * * (11 PM IST)
   schedule:
@@ -123,19 +139,48 @@ jobs:
         echo "  Headless: ${{ github.event.inputs.headless || 'true' }}"
         echo "  Base URL: ${{ env.BASE_URL }}"
         echo "  CI Environment: true"
+        echo "  Test Class: ${{ github.event.inputs.test_class || 'All tests' }}"
+        echo "  Test Method: ${{ github.event.inputs.test_method || 'All methods' }}"
         echo ""
         
-        mvn test \
-          -Dbrowser=${{ matrix.browser }} \
-          -Dheadless=${{ github.event.inputs.headless || 'true' }} \
-          -Dbase.url=${{ env.BASE_URL }} \
-          -Ddefault.username=${{ env.USER_EMAIL }} \
-          -Ddefault.password=${{ env.USER_PASSWORD }} \
+        # Build Maven command based on inputs
+        MAVEN_CMD="mvn test"
+        
+        # Add browser parameter
+        MAVEN_CMD="$MAVEN_CMD -Dbrowser=${{ matrix.browser }}"
+        
+        # Add headless parameter
+        MAVEN_CMD="$MAVEN_CMD -Dheadless=${{ github.event.inputs.headless || 'true' }}"
+        
+        # Add base URL parameter
+        MAVEN_CMD="$MAVEN_CMD -Dbase.url=${{ env.BASE_URL }}"
+        
+        # Add credentials if secrets are available
+        if [ -n "${{ env.USER_EMAIL }}" ] && [ -n "${{ env.USER_PASSWORD }}" ]; then
+          MAVEN_CMD="$MAVEN_CMD -Ddefault.username=${{ env.USER_EMAIL }}"
+          MAVEN_CMD="$MAVEN_CMD -Ddefault.password=${{ env.USER_PASSWORD }}"
+        fi
+        
+        # Add specific test class if provided
+        if [ -n "${{ github.event.inputs.test_class }}" ]; then
+          MAVEN_CMD="$MAVEN_CMD -Dtest=${{ github.event.inputs.test_class }}"
+        fi
+        
+        # Add specific test method if provided (with class)
+        if [ -n "${{ github.event.inputs.test_method }}" ] && [ -n "${{ github.event.inputs.test_class }}" ]; then
+          MAVEN_CMD="$MAVEN_CMD -Dtest=${{ github.event.inputs.test_class }}#${{ github.event.inputs.test_method }}"
+        fi
+        
+        # Add advanced testing options
+        MAVEN_CMD="$MAVEN_CMD \
           -Dcapture.screenshot.on.failure=true \
           -Dcapture.trace=true \
           -Dextent.reporter.html.start=true \
           -Dci.environment=true \
-          -X
+          -X"
+        
+        echo "Executing command: $MAVEN_CMD"
+        eval $MAVEN_CMD
       continue-on-error: true
       shell: bash
 
@@ -179,9 +224,9 @@ jobs:
       if: always()
       run: |
         echo "## Test Results Summary" >> $GITHUB_STEP_SUMMARY
-        echo "| Browser | Status | Duration |" >> $GITHUB_STEP_SUMMARY
-        echo "|---------|--------|----------|" >> $GITHUB_STEP_SUMMARY
-        echo "| ${{ matrix.browser-name }} | ${{ job.status }} | ${{ job.duration }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Browser | Status | Duration | Test Class | Test Method |" >> $GITHUB_STEP_SUMMARY
+        echo "|---------|--------|----------|------------|-------------|" >> $GITHUB_STEP_SUMMARY
+        echo "| ${{ matrix.browser-name }} | ${{ job.status }} | ${{ job.duration }} | ${{ github.event.inputs.test_class || 'All tests' }} | ${{ github.event.inputs.test_method || 'All methods' }} |" >> $GITHUB_STEP_SUMMARY
         
         if [ -f "target/surefire-reports/TEST-TestSuite.xml" ]; then
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -191,6 +236,43 @@ jobs:
           echo '```' >> $GITHUB_STEP_SUMMARY
         fi
 
+    - name: Comment PR with Results
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          const path = './test-output/ExtentReport.html';
+          
+          if (fs.existsSync(path)) {
+            const reportContent = fs.readFileSync(path, 'utf8');
+            
+            // Create PR comment with test summary
+            const comment = `
+            ## 🧪 Test Results Summary
+            
+            **Browser:** ${{ matrix.browser-name }}
+            **Status:** ${{ job.status }}
+            **Duration:** ${{ job.duration }}
+            **Test Class:** ${{ github.event.inputs.test_class || 'All tests' }}
+            **Test Method:** ${{ github.event.inputs.test_method || 'All methods' }}
+            
+            ### 📊 Reports Available:
+            - [Extent Report](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            - Test Results and Screenshots uploaded as artifacts
+            
+            ---
+            *Automated test results from CepHire AI Web Automation Tests*
+            `;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+          }
+
   security-scan:
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -198,7 +280,7 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-
+    
     - name: Run Trivy vulnerability scanner
       uses: aquasecurity/trivy-action@master
       with:
@@ -206,9 +288,9 @@ jobs:
         scan-ref: '.'
         format: 'sarif'
         output: 'trivy-results.sarif'
-
+    
     - name: Upload Trivy scan results to GitHub Security tab
-      uses: github/codeql-action/upload-sarif@v4
+      uses: github/codeql-action/upload-sarif@v3
       if: always()
       with:
         sarif_file: 'trivy-results.sarif'
