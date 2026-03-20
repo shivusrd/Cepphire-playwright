@@ -163,4 +163,36 @@ public class JsonDataReader {
         }
         return current;
     }
+    
+    public JsonNode getUserData(String userType) {
+        return rootNode.path("users").path(userType);
+    }
+    
+    public String getUserEmail(String userType) {
+        return rootNode.path("users")
+                .path(userType)
+                .path("email")
+                .asText();
+    }
+    
+    public String getUserPassword(String userType) {
+        return rootNode.path("users")
+                .path(userType)
+                .path("password")
+                .asText();
+    }
+    
+    public String getUserRole(String userType) {
+        return rootNode.path("users")
+                .path(userType)
+                .path("role")
+                .asText();
+    }
+    
+    public String getUserDisplayName(String userType) {
+        return rootNode.path("users")
+                .path(userType)
+                .path("displayName")
+                .asText();
+    }
 }

@@ -6,6 +6,11 @@
         "password": "Shivu@srd1",
         "expectedUrl": "/dashboard"
       },
+      "admin01": {
+        "username": "admin01@gmail.com",
+        "password": "Shivu@srd1",
+        "expectedUrl": "/dashboard"
+      },
       "superAdmin": {
         "username": "superadmin@cepphire.com",
         "password": "Admin@123",
@@ -28,6 +33,14 @@
         "password": "",
         "errorMessage": "Username and password are required"
       }
+    }
+  },
+  "users": {
+    "testRecruiter": {
+      "email": "testrecruiter01@gmail.com",
+      "password": "Shivu@srd1",
+      "role": "recruiter",
+      "displayName": "C CeppHire"
     }
   },
   "organization": {
