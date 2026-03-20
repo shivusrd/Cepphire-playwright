@@ -16,75 +16,77 @@ public class DynamicTestDataGenerator {
     
     /**
      * Generates a unique email address for testing
-     * Format: baseName + timestamp + random + @domain
+     * Format: baseName + shortTimestamp + random + @domain
      */
     public static String generateUniqueEmail(String baseName) {
-        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern(TIMESTAMP_PATTERN));
-        String random = String.format("%03d", ThreadLocalRandom.current().nextInt(1000));
-        return String.format("%s%s%s@%s", baseName, timestamp, random, BASE_EMAIL_DOMAIN);
+        String shortTimestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("HHmmss"));
+        String random = String.format("%02d", ThreadLocalRandom.current().nextInt(100));
+        return String.format("%s%s%s@%s", baseName, shortTimestamp, random, BASE_EMAIL_DOMAIN);
     }
     
     /**
      * Generates a unique email with specific domain
      */
     public static String generateUniqueEmail(String baseName, String domain) {
-        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern(TIMESTAMP_PATTERN));
-        String random = String.format("%03d", ThreadLocalRandom.current().nextInt(1000));
-        return String.format("%s%s%s@%s", baseName, timestamp, random, domain);
+        String shortTimestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("HHmmss"));
+        String random = String.format("%02d", ThreadLocalRandom.current().nextInt(100));
+        return String.format("%s%s%s@%s", baseName, shortTimestamp, random, domain);
     }
     
     /**
-     * Generates a unique email using UUID (most unique)
+     * Generates a unique email using UUID (shorter version)
      */
     public static String generateUniqueEmailWithUUID(String baseName) {
-        String uuid = UUID.randomUUID().toString().substring(0, 8);
+        String uuid = UUID.randomUUID().toString().substring(0, 6);
         return String.format("%s%s@%s", baseName, uuid, BASE_EMAIL_DOMAIN);
     }
     
     /**
-     * Generates a unique display name
+     * Generates a unique display name (shorter)
      */
     public static String generateUniqueDisplayName(String baseName) {
-        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("HHmmss"));
-        String random = String.format("%03d", ThreadLocalRandom.current().nextInt(1000));
-        return String.format("%s %s%s", baseName, timestamp, random);
+        String shortTimestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("HHmm"));
+        String random = String.format("%02d", ThreadLocalRandom.current().nextInt(100));
+        return String.format("%s%s%s", baseName, shortTimestamp, random);
     }
     
     /**
-     * Generates a unique username
+     * Generates a unique username (shorter)
      */
     public static String generateUniqueUsername(String baseName) {
-        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("HHmmss"));
-        String random = String.format("%03d", ThreadLocalRandom.current().nextInt(1000));
-        return String.format("%s%s%s", baseName, timestamp, random);
+        String shortTimestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("HHmm"));
+        String random = String.format("%02d", ThreadLocalRandom.current().nextInt(100));
+        return String.format("%s%s%s", baseName, shortTimestamp, random);
     }
     
     /**
-     * Generates a unique organization name
+     * Generates a unique organization name (shorter)
      */
     public static String generateUniqueOrgName(String baseName) {
-        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("MMddHHmm"));
-        String random = String.format("%03d", ThreadLocalRandom.current().nextInt(1000));
-        return String.format("%s %s%s", baseName, timestamp, random);
+        String shortTimestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("MMdd"));
+        String random = String.format("%02d", ThreadLocalRandom.current().nextInt(100));
+        return String.format("%s%s%s", baseName, shortTimestamp, random);
     }
     
     /**
-     * Generates browser-specific unique data
-     * Format: baseName + browserName + timestamp + random
+     * Generates browser-specific unique data (shorter)
+     * Format: baseName + browserShort + shortTimestamp + random
      */
     public static String generateBrowserSpecificEmail(String baseName, String browserName) {
-        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern(TIMESTAMP_PATTERN));
-        String random = String.format("%03d", ThreadLocalRandom.current().nextInt(1000));
-        return String.format("%s%s%s%s@%s", baseName, browserName.toLowerCase(), timestamp, random, BASE_EMAIL_DOMAIN);
+        String shortTimestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("HHmmss"));
+        String random = String.format("%02d", ThreadLocalRandom.current().nextInt(100));
+        String browserShort = browserName.substring(0, 1).toUpperCase(); // C, F, W
+        return String.format("%s%s%s%s@%s", baseName, browserShort, shortTimestamp, random, BASE_EMAIL_DOMAIN);
     }
     
     /**
-     * Generates browser-specific unique display name
+     * Generates browser-specific unique display name (shorter)
      */
     public static String generateBrowserSpecificDisplayName(String baseName, String browserName) {
-        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("HHmmss"));
-        String random = String.format("%03d", ThreadLocalRandom.current().nextInt(1000));
-        return String.format("%s %s%s%s", baseName, browserName.substring(0, 1).toUpperCase() + browserName.substring(1), timestamp, random);
+        String shortTimestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("HHmm"));
+        String random = String.format("%02d", ThreadLocalRandom.current().nextInt(100));
+        String browserShort = browserName.substring(0, 1).toUpperCase(); // C, F, W
+        return String.format("%s%s%s%s", baseName, browserShort, shortTimestamp, random);
     }
     
     /**
@@ -128,7 +130,7 @@ public class DynamicTestDataGenerator {
             this.uniqueId = generateShortUniqueId();
             this.email = generateBrowserSpecificEmail(baseName, browserName);
             this.displayName = generateBrowserSpecificDisplayName(baseName, browserName);
-            this.username = generateUniqueUsername(baseName + browserName.toLowerCase());
+            this.username = generateUniqueUsername(baseName + browserName.substring(0, 1).toLowerCase());
         }
         
         @Override
@@ -145,7 +147,7 @@ public class DynamicTestDataGenerator {
         String uniqueId = generateShortUniqueId();
         String email = generateBrowserSpecificEmail("recruiter", browserName);
         String displayName = generateBrowserSpecificDisplayName("Recruiter", browserName);
-        String username = generateUniqueUsername("recruiter" + browserName.toLowerCase());
+        String username = generateUniqueUsername("recruiter" + browserName.substring(0, 1).toLowerCase());
         return new UniqueUserData(email, displayName, username, uniqueId);
     }
     
@@ -156,7 +158,7 @@ public class DynamicTestDataGenerator {
         String uniqueId = generateShortUniqueId();
         String email = generateBrowserSpecificEmail("candidate", browserName);
         String displayName = generateBrowserSpecificDisplayName("Candidate", browserName);
-        String username = generateUniqueUsername("candidate" + browserName.toLowerCase());
+        String username = generateUniqueUsername("candidate" + browserName.substring(0, 1).toLowerCase());
         return new UniqueUserData(email, displayName, username, uniqueId);
     }
     
