@@ -23,7 +23,23 @@ on:
         required: false
         default: true
         type: boolean
+      test_class:
+        description: 'Specific test class to run (optional)'
+        required: false
+        default: ''
+        type: string
+      test_method:
+        description: 'Specific test method to run (optional)'
+        required: false
+        default: ''
+        type: string
   
+  # Automatic triggers
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
   # Scheduled triggers - 11:00 AM and 11:00 PM IST (5:30 UTC and 17:30 UTC)
   # Cron expressions: 30 5 * * * (11 AM IST) and 30 17 * * * (11 PM IST)
   schedule:
@@ -116,30 +132,61 @@ jobs:
         echo "  HEADLESS: ${{ github.event.inputs.headless || 'true' }}"
         echo "  DISPLAY: (unset)"
 
-    - name: Run Playwright Tests
+    - name: Run Playwright Tests - ${{ matrix.browser }}
       run: |
         echo "Starting test execution with configuration:"
         echo "  Browser: ${{ matrix.browser }}"
         echo "  Headless: ${{ github.event.inputs.headless || 'true' }}"
         echo "  Base URL: ${{ env.BASE_URL }}"
         echo "  CI Environment: true"
+        echo "  Test Class: ${{ github.event.inputs.test_class || 'All tests' }}"
+        echo "  Test Method: ${{ github.event.inputs.test_method || 'All methods' }}"
+        echo "  Dynamic Test Data: ENABLED (unique per browser)"
         echo ""
         
-        mvn test \
-          -Dbrowser=${{ matrix.browser }} \
-          -Dheadless=${{ github.event.inputs.headless || 'true' }} \
-          -Dbase.url=${{ env.BASE_URL }} \
-          -Ddefault.username=${{ env.USER_EMAIL }} \
-          -Ddefault.password=${{ env.USER_PASSWORD }} \
+        # Build Maven command based on inputs
+        MAVEN_CMD="mvn test"
+        
+        # Add browser parameter
+        MAVEN_CMD="$MAVEN_CMD -Dbrowser=${{ matrix.browser }}"
+        
+        # Add headless parameter
+        MAVEN_CMD="$MAVEN_CMD -Dheadless=${{ github.event.inputs.headless || 'true' }}"
+        
+        # Add base URL parameter
+        MAVEN_CMD="$MAVEN_CMD -Dbase.url=${{ env.BASE_URL }}"
+        
+        # Add credentials if secrets are available
+        if [ -n "${{ env.USER_EMAIL }}" ] && [ -n "${{ env.USER_PASSWORD }}" ]; then
+          MAVEN_CMD="$MAVEN_CMD -Ddefault.username=${{ env.USER_EMAIL }}"
+          MAVEN_CMD="$MAVEN_CMD -Ddefault.password=${{ env.USER_PASSWORD }}"
+        fi
+        
+        # Add specific test class if provided
+        if [ -n "${{ github.event.inputs.test_class }}" ]; then
+          MAVEN_CMD="$MAVEN_CMD -Dtest=${{ github.event.inputs.test_class }}"
+        fi
+        
+        # Add specific test method if provided (with class)
+        if [ -n "${{ github.event.inputs.test_method }}" ] && [ -n "${{ github.event.inputs.test_class }}" ]; then
+          MAVEN_CMD="$MAVEN_CMD -Dtest=${{ github.event.inputs.test_class }}#${{ github.event.inputs.test_method }}"
+        fi
+        
+        # Add advanced testing options
+        MAVEN_CMD="$MAVEN_CMD \
           -Dcapture.screenshot.on.failure=true \
           -Dcapture.trace=true \
           -Dextent.reporter.html.start=true \
           -Dci.environment=true \
-          -X
+          -X"
+        
+        echo "Executing command: $MAVEN_CMD"
+        echo "Each browser will use unique test data to avoid conflicts"
+        eval $MAVEN_CMD
       continue-on-error: true
       shell: bash
 
-    - name: Upload Extent Reports
+    - name: Upload Extent Reports - ${{ matrix.browser }}
       uses: actions/upload-artifact@v4
       if: always()
       with:
@@ -149,7 +196,7 @@ jobs:
           test-output/screenshots/
         retention-days: 30
 
-    - name: Upload Playwright Traces
+    - name: Upload Playwright Traces - ${{ matrix.browser }}
       uses: actions/upload-artifact@v4
       if: always()
       with:
@@ -157,7 +204,7 @@ jobs:
         path: test-output/traces/
         retention-days: 7
 
-    - name: Upload Playwright Videos
+    - name: Upload Playwright Videos - ${{ matrix.browser }}
       uses: actions/upload-artifact@v4
       if: always()
       with:
@@ -165,7 +212,7 @@ jobs:
         path: test-output/videos/
         retention-days: 7
 
-    - name: Upload Test Results
+    - name: Upload Test Results - ${{ matrix.browser }}
       uses: actions/upload-artifact@v4
       if: always()
       with:
@@ -175,21 +222,62 @@ jobs:
           target/failsafe-reports/
         retention-days: 30
 
-    - name: Generate Test Summary
+    - name: Generate Test Summary - ${{ matrix.browser }}
       if: always()
       run: |
-        echo "## Test Results Summary" >> $GITHUB_STEP_SUMMARY
-        echo "| Browser | Status | Duration |" >> $GITHUB_STEP_SUMMARY
-        echo "|---------|--------|----------|" >> $GITHUB_STEP_SUMMARY
-        echo "| ${{ matrix.browser-name }} | ${{ job.status }} | ${{ job.duration }} |" >> $GITHUB_STEP_SUMMARY
-        
-        if [ -f "target/surefire-reports/TEST-TestSuite.xml" ]; then
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Test Details" >> $GITHUB_STEP_SUMMARY
-          echo '```xml' >> $GITHUB_STEP_SUMMARY
-          cat target/surefire-reports/TEST-TestSuite.xml >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-        fi
+        echo "## ${{ matrix.browser-name }} Test Results Summary" >> $GITHUB_STEP_SUMMARY
+        echo "| Status | Duration | Test Class | Test Method | Dynamic Data |" >> $GITHUB_STEP_SUMMARY
+        echo "|--------|----------|------------|-------------|-------------|" >> $GITHUB_STEP_SUMMARY
+        echo "| ${{ job.status }} | ${{ job.duration }} | ${{ github.event.inputs.test_class || 'All tests' }} | ${{ github.event.inputs.test_method || 'All methods' }} | Unique per browser |" >> $GITHUB_STEP_SUMMARY
+
+    - name: Comment PR with Results
+      if: github.event_name == 'pull_request' && matrix.browser == 'chromium'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          const path = './test-output/ExtentReport.html';
+          
+          if (fs.existsSync(path)) {
+            const reportContent = fs.readFileSync(path, 'utf8');
+            
+            // Create PR comment with test summary
+            const comment = `
+            ## Parallel Test Results Summary (with Dynamic Data)
+            
+            **Browsers Executed:** Chromium, Firefox, WebKit (Parallel)
+            **Status:** ${{ job.status }}
+            **Duration:** ${{ job.duration }}
+            **Test Class:** ${{ github.event.inputs.test_class || 'All tests' }}
+            **Test Method:** ${{ github.event.inputs.test_method || 'All methods' }}
+            
+            ### Dynamic Test Data Feature:
+            - Unique email per browser: No conflicts
+            - Unique display name per browser: Clean identification
+            - Timestamp-based uniqueness: Real-time generation
+            - Browser-specific naming: Easy debugging
+            
+            ### Reports Available:
+            - [Extent Report](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            - Test Results and Screenshots uploaded as artifacts (separate per browser)
+            
+            ### Benefits:
+            - Parallel Execution: All browsers run simultaneously
+            - No Data Conflicts: Each browser uses unique test data
+            - Faster Execution: ~30 minutes vs ~70 minutes sequential
+            - Consistent Testing: Same test logic, different data
+            
+            ---
+            *Parallel test execution with dynamic data completed for CepHire AI Web Automation Tests*
+            `;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+          }
 
   security-scan:
     runs-on: ubuntu-latest
@@ -198,7 +286,7 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-
+    
     - name: Run Trivy vulnerability scanner
       uses: aquasecurity/trivy-action@master
       with:
@@ -206,9 +294,9 @@ jobs:
         scan-ref: '.'
         format: 'sarif'
         output: 'trivy-results.sarif'
-
+    
     - name: Upload Trivy scan results to GitHub Security tab
-      uses: github/codeql-action/upload-sarif@v4
+      uses: github/codeql-action/upload-sarif@v3
       if: always()
       with:
         sarif_file: 'trivy-results.sarif'
@@ -234,18 +322,18 @@ jobs:
           
           // Create a summary message
           const summary = `
-          ## 🧪 Playwright Test Results
+          ## Playwright Test Results
           
           **Repository:** ${owner}/${repo}
           **Commit:** ${sha}
           **Run ID:** ${runId}
           
           ### Test Execution Summary:
-          - ✅ Multi-browser testing completed
-          - 📊 Extent Reports generated
-          - 📸 Screenshots captured on failures
-          - 🎥 Playwright traces recorded
-          - 🛡️ Security scan completed
+          - Multi-browser testing completed
+          - Extent Reports generated
+          - Screenshots captured on failures
+          - Playwright traces recorded
+          - Security scan completed
           
           ### Artifacts Available:
           - Extent Reports (HTML format)

@@ -43,17 +43,18 @@ public class BaseTest {
             // Check if we're in a headless environment (GitHub Actions, Jenkins, etc.)
             String ciEnvironment = System.getenv("CI");
             String githubActions = System.getenv("GITHUB_ACTIONS");
-            String display = System.getenv("DISPLAY");
             
             System.out.println("Environment Detection Debug:");
             System.out.println("  CI env: " + ciEnvironment);
             System.out.println("  GITHUB_ACTIONS env: " + githubActions);
-            System.out.println("  DISPLAY env: " + display);
             System.out.println("  Original headless setting: " + systemHeadless);
             
-            if (ciEnvironment != null || githubActions != null || display == null) {
+            // Only force headless mode in actual CI environments
+            if (ciEnvironment != null || githubActions != null) {
                 System.out.println("CI/CD environment detected, forcing headless mode");
                 systemHeadless = "true";
+            } else {
+                System.out.println("Local environment detected, keeping headless=false");
             }
         } else {
             System.out.println("Headless mode already set to: " + systemHeadless);
