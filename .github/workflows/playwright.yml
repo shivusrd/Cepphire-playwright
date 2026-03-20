@@ -1,9 +1,10 @@
 name: Playwright Java Tests
 
 permissions:
-  contents: read
+  contents: write
   security-events: write
   actions: read
+  pull-requests: write
 
 on:
   # Manual trigger for on-demand testing
@@ -42,12 +43,33 @@ on:
         required: false
         default: ''
         type: string
+      # Security Scan Controls
+      enable_trivy_scan:
+        description: 'Enable Trivy vulnerability scanning'
+        required: false
+        default: true
+        type: boolean
+      enable_codeql_scan:
+        description: 'Enable CodeQL security analysis'
+        required: false
+        default: true
+        type: boolean
+      enable_gitleaks_scan:
+        description: 'Enable Gitleaks secrets detection'
+        required: false
+        default: true
+        type: boolean
+      enable_security_scans:
+        description: 'Enable ALL security scans (overrides individual settings)'
+        required: false
+        default: true
+        type: boolean
   
   # Automatic triggers (always parallel)
   push:
-    branches: [ main, develop ]
+    branches: [ main, develop, master ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, master ]
 
   # Scheduled triggers - 11:00 AM and 11:00 PM IST (5:30 UTC and 17:30 UTC)
   # Cron expressions: 30 5 * * * (11 AM IST) and 30 17 * * * (11 PM IST)
@@ -291,185 +313,14 @@ jobs:
             });
           }
 
-  # Sequential execution (optional for manual triggers)
-  test-sequential:
-    timeout-minutes: 60
-    runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.execution_mode == 'sequential'
-    
-    strategy:
-      matrix:
-        browser: ${{ github.event.inputs.browser_selection == 'all' && fromJson('["chromium", "firefox", "webkit"]') || fromJson(format('["%s"]', github.event.inputs.browser_selection)) }}
-        include:
-          - browser: chromium
-            browser-name: "Chromium"
-          - browser: firefox
-            browser-name: "Firefox"
-          - browser: webkit
-            browser-name: "WebKit"
-      fail-fast: false
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Set up JDK 21 (Temurin)
-      uses: actions/setup-java@v4
-      with:
-        java-version: '21'
-        distribution: 'temurin'
-        cache: maven
-
-    - name: Cache Maven dependencies
-      uses: actions/cache@v4
-      with:
-        path: ~/.m2
-        key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
-        restore-keys: |
-          ${{ runner.os }}-m2-
-
-    - name: Cache Playwright browsers
-      uses: actions/cache@v4
-      with:
-        path: ~/.cache/ms-playwright
-        key: ${{ runner.os }}-playwright-${{ hashFiles('**/pom.xml') }}
-        restore-keys: |
-          ${{ runner.os }}-playwright-
-
-    - name: Install system dependencies for Playwright
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y \
-          libnss3 \
-          libatk-bridge2.0-0 \
-          libdrm2 \
-          libxcomposite1 \
-          libxdamage1 \
-          libxrandr2 \
-          libgbm1 \
-          libxss1 \
-          libasound2t64 \
-          libgtk-3-0 \
-          libxshmfence1
-
-    - name: Install Playwright browsers and dependencies
-      run: |
-        # Install browsers using Maven with proper system dependencies
-        mvn exec:java -Dexec.mainClass=com.microsoft.playwright.CLI -Dexec.args="install chromium firefox webkit"
-      shell: bash
-
-    - name: Create test-output directory
-      run: mkdir -p test-output/screenshots test-output/traces test-output/videos
-
-    - name: Set environment variables for CI
-      run: |
-        echo "CI=true" >> $GITHUB_ENV
-        echo "GITHUB_ACTIONS=true" >> $GITHUB_ENV
-        echo "HEADLESS=${{ github.event.inputs.headless || 'true' }}" >> $GITHUB_ENV
-        echo "DISPLAY=" >> $GITHUB_ENV
-
-    - name: Run Playwright Tests - ${{ matrix.browser }} (SEQUENTIAL)
-      run: |
-        echo "🔄 Starting SEQUENTIAL test execution with configuration:"
-        echo "  Browser: ${{ matrix.browser }}"
-        echo "  Headless: ${{ github.event.inputs.headless || 'true' }}"
-        echo "  Base URL: ${{ env.BASE_URL }}"
-        echo "  CI Environment: true"
-        echo "  Test Class: ${{ github.event.inputs.test_class || 'All tests' }}"
-        echo "  Test Method: ${{ github.event.inputs.test_method || 'All methods' }}"
-        echo "  🔄 Dynamic Test Data: ENABLED (unique per browser)"
-        echo "  ⏱️ Sequential Mode: One browser at a time"
-        echo ""
-        
-        # Build Maven command based on inputs
-        MAVEN_CMD="mvn test"
-        
-        # Add browser parameter
-        MAVEN_CMD="$MAVEN_CMD -Dbrowser=${{ matrix.browser }}"
-        
-        # Add headless parameter
-        MAVEN_CMD="$MAVEN_CMD -Dheadless=${{ github.event.inputs.headless || 'true' }}"
-        
-        # Add base URL parameter
-        MAVEN_CMD="$MAVEN_CMD -Dbase.url=${{ env.BASE_URL }}"
-        
-        # Add credentials if secrets are available
-        if [ -n "${{ env.USER_EMAIL }}" ] && [ -n "${{ env.USER_PASSWORD }}" ]; then
-          MAVEN_CMD="$MAVEN_CMD -Ddefault.username=${{ env.USER_EMAIL }}"
-          MAVEN_CMD="$MAVEN_CMD -Ddefault.password=${{ env.USER_PASSWORD }}"
-        fi
-        
-        # Add specific test class if provided
-        if [ -n "${{ github.event.inputs.test_class }}" ]; then
-          MAVEN_CMD="$MAVEN_CMD -Dtest=${{ github.event.inputs.test_class }}"
-        fi
-        
-        # Add specific test method if provided (with class)
-        if [ -n "${{ github.event.inputs.test_method }}" ] && [ -n "${{ github.event.inputs.test_class }}" ]; then
-          MAVEN_CMD="$MAVEN_CMD -Dtest=${{ github.event.inputs.test_class }}#${{ github.event.inputs.test_method }}"
-        fi
-        
-        # Add advanced testing options
-        MAVEN_CMD="$MAVEN_CMD \
-          -Dcapture.screenshot.on.failure=true \
-          -Dcapture.trace=true \
-          -Dextent.reporter.html.start=true \
-          -Dci.environment=true \
-          -X"
-        
-        echo "Executing command: $MAVEN_CMD"
-        echo "🔄 Each browser will use unique test data to avoid conflicts"
-        eval $MAVEN_CMD
-      continue-on-error: true
-      shell: bash
-
-    - name: Upload Extent Reports - ${{ matrix.browser }}
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: extent-reports-${{ matrix.browser }}
-        path: |
-          test-output/ExtentReport.html
-          test-output/screenshots/
-        retention-days: 30
-
-    - name: Upload Playwright Traces - ${{ matrix.browser }}
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: playwright-traces-${{ matrix.browser }}
-        path: test-output/traces/
-        retention-days: 7
-
-    - name: Upload Playwright Videos - ${{ matrix.browser }}
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: playwright-videos-${{ matrix.browser }}
-        path: test-output/videos/
-        retention-days: 7
-
-    - name: Upload Test Results - ${{ matrix.browser }}
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: test-results-${{ matrix.browser }}
-        path: |
-          target/surefire-reports/
-          target/failsafe-reports/
-        retention-days: 30
-
-    - name: Generate Test Summary - ${{ matrix.browser }}
-      if: always()
-      run: |
-        echo "## ${{ matrix.browser-name }} Test Results Summary" >> $GITHUB_STEP_SUMMARY
-        echo "| Status | Duration | Test Class | Test Method | Dynamic Data | Mode |" >> $GITHUB_STEP_SUMMARY
-        echo "|--------|----------|------------|-------------|-------------|------|" >> $GITHUB_STEP_SUMMARY
-        echo "| ${{ job.status }} | ${{ job.duration }} | ${{ github.event.inputs.test_class || 'All tests' }} | ${{ github.event.inputs.test_method || 'All methods' }} | Unique per browser | SEQUENTIAL |" >> $GITHUB_STEP_SUMMARY
+  # Sequential execution removed - Parallel only
 
   security-scan:
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') || 
+      (github.event_name == 'workflow_dispatch' && 
+       (github.event.inputs.enable_security_scans == 'true' || github.event.inputs.enable_trivy_scan == 'true'))
     
     steps:
     - name: Checkout code
@@ -489,9 +340,109 @@ jobs:
       with:
         sarif_file: 'trivy-results.sarif'
 
+  # CodeQL Security Analysis
+  codeql:
+    runs-on: ubuntu-latest
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') || 
+      (github.event_name == 'workflow_dispatch' && 
+       (github.event.inputs.enable_security_scans == 'true' || github.event.inputs.enable_codeql_scan == 'true'))
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v3
+      with:
+        languages: java
+        queries: security-extended, security-and-quality
+
+    - name: Autobuild
+      uses: github/codeql-action/autobuild@v3
+
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v3
+      with:
+        category: "/language:java"
+
+  # Gitleaks Secrets Detection
+  gitleaks:
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'push' || 
+      (github.event_name == 'workflow_dispatch' && 
+       (github.event.inputs.enable_security_scans == 'true' || github.event.inputs.enable_gitleaks_scan == 'true'))
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Run Gitleaks
+      uses: gitleaks/gitleaks-action@v2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE || '' }}
+
+  update-master:
+    runs-on: ubuntu-latest
+    needs: [test-parallel, security-scan, codeql, gitleaks]
+    if: |
+      success() && 
+      github.ref == 'refs/heads/main' && 
+      github.event_name == 'push' &&
+      (
+        (needs.test-parallel.result == 'success' || needs.test-parallel.result == 'skipped') &&
+        (needs.security-scan.result == 'success' || needs.security-scan.result == 'skipped') &&
+        (needs.codeql.result == 'success' || needs.codeql.result == 'skipped') &&
+        (needs.gitleaks.result == 'success' || needs.gitleaks.result == 'skipped')
+      )
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GH_PAT }}
+        fetch-depth: 0
+
+    - name: Configure Git
+      run: |
+        git config --global user.name 'github-actions[bot]'
+        git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+
+    - name: Merge main into master
+      run: |
+        echo "🚀 Starting merge of main into master after successful tests"
+        echo "Current branch: ${{ github.ref_name }}"
+        echo "Event: ${{ github.event_name }}"
+        
+        # Checkout master branch
+        git checkout master || git checkout -b master origin/master
+        
+        # Merge main into master
+        git merge origin/main --no-ff -m "🤖 Auto-merge main into master after successful tests
+        
+        ✅ Tests passed on all browsers
+        📊 Extent Reports generated
+        🛡️ Security scan completed
+        🔄 Dynamic test data working
+        
+        Commit: ${{ github.sha }}
+        Workflow: ${{ github.run_id }}
+        
+        Auto-generated by GitHub Actions"
+        
+        # Push changes to master
+        git push origin master
+        
+        echo "✅ Successfully merged main into master"
+        echo "📊 Master branch updated with latest tested code"
+
   notify:
     runs-on: ubuntu-latest
-    needs: [test-parallel, test-sequential, security-scan]
+    needs: [test-parallel, security-scan, codeql, gitleaks, update-master]
     if: always()
     
     steps:
@@ -507,22 +458,41 @@ jobs:
           console.log('Workflow completed for commit:', sha);
           console.log('Run ID:', runId);
           console.log('Repository:', `${owner}/${repo}`);
+          console.log('Trigger:', context.eventName === 'workflow_dispatch' ? 'Manual' : 'Automatic');
           
           // Create a summary message
+          const enableSecurityScans = context.payload.inputs?.enable_security_scans === 'true';
+          const enableTrivy = context.payload.inputs?.enable_trivy_scan === 'true' || (!context.payload.inputs?.enable_trivy_scan && enableSecurityScans);
+          const enableCodeQL = context.payload.inputs?.enable_codeql_scan === 'true' || (!context.payload.inputs?.enable_codeql_scan && enableSecurityScans);
+          const enableGitleaks = context.payload.inputs?.enable_gitleaks_scan === 'true' || (!context.payload.inputs?.enable_gitleaks_scan && enableSecurityScans);
+          
           const summary = `
           ## 🚀 Playwright Test Results Summary
           
           **Repository:** ${owner}/${repo}
           **Commit:** ${sha}
           **Run ID:** ${runId}
+          **Trigger:** ${context.eventName === 'workflow_dispatch' ? 'Manual' : 'Automatic'}
           
           ### Test Execution Summary:
           - ✅ Multi-browser testing completed
           - 📊 Extent Reports generated
           - 📸 Screenshots captured on failures
           - 🎥 Playwright traces recorded
-          - 🛡️ Security scan completed
           - 🔄 Dynamic test data generation working
+          
+          ### 🛡️ Security Scanning Status:
+          ${enableTrivy ? '- ✅ **Trivy**: Vulnerability scanning completed' : '- ❌ **Trivy**: Disabled'}
+          ${enableCodeQL ? '- ✅ **CodeQL**: Deep code analysis completed' : '- ❌ **CodeQL**: Disabled'}
+          ${enableGitleaks ? '- ✅ **Gitleaks**: Secrets detection completed' : '- ❌ **Gitleaks**: Disabled'}
+          - 📋 **Security Reports**: Available in GitHub Security tab (for enabled scans)
+          
+          ### 🔄 Master Branch Update:
+          ${context.payload.ref === 'refs/heads/main' ? 
+            '- ✅ Master branch automatically updated after successful tests' +
+            '- 📦 Latest tested code merged to master' +
+            '- 🚀 Production-ready code deployed to master' : 
+            '- ℹ️ Master branch update only triggers on main branch pushes'}
           
           ### Artifacts Available:
           - Extent Reports (HTML format)

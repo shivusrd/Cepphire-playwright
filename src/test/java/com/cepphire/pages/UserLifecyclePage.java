@@ -37,7 +37,7 @@ public class UserLifecyclePage {
         // Handle case where ExtentTest is not available (IDE run without TestNG XML)
         if (extentTest == null) {
             return executeBasicUserLifecycle(softAssert, adminEmail, adminPassword, testUserEmail, 
-                                           testUserPassword, testUserRole, testUserDisplayName);
+                                           testUserPassword, testUserRole, testUserEmail);
         }
         
         extentTest.log(Status.INFO, "<b>User Credential Lifecycle Test</b>");
@@ -63,7 +63,7 @@ public class UserLifecyclePage {
         // Phase 3: Admin Login and Revoke Access
         boolean revokeSuccess = performAdminLoginAndRevokeAccess(extentTest, softAssert, 
                                                                adminEmail, adminPassword, 
-                                                               testUserDisplayName);
+                                                               testUserEmail);
         
         // Final Test Summary
         boolean overallSuccess = issueSuccess && initSuccess && revokeSuccess;
@@ -158,9 +158,26 @@ public class UserLifecyclePage {
                 
                 // Issue credentials to test user
                 extentTest.log(Status.INFO, "Issuing credentials to test user: " + userEmail);
-                manageUsersPage.enterUserEmail(userEmail);
-                manageUsersPage.selectRole(role);
-                manageUsersPage.issueCredentials();
+                
+                // Click Create User button
+                page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Create User")).click();
+                page.waitForTimeout(1000);
+                
+                // Enter user email
+                page.getByRole(AriaRole.TEXTBOX, new Page.GetByRoleOptions().setName("user@company.com")).fill(userEmail);
+                
+                // Select role - first click the complementary button, then click the role option
+                page.locator("form").getByRole(AriaRole.BUTTON, new Locator.GetByRoleOptions().setName(role)).click();
+                page.waitForTimeout(500);
+                page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName(role)).nth(1).click();
+                
+                // Click Create User button to submit
+                page.locator("form").getByRole(AriaRole.BUTTON, new Locator.GetByRoleOptions().setName("Create User")).click();
+                page.waitForTimeout(2000);
+                
+                // Close toast notification
+                page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Close toast")).click();
+                page.waitForTimeout(1000);
                 
                 extentTest.log(Status.PASS, "Credentials issued successfully to: " + userEmail);
                 page.waitForLoadState();
@@ -363,7 +380,7 @@ public class UserLifecyclePage {
      * Phase 3: Admin login and revoke user access
      */
     private boolean performAdminLoginAndRevokeAccess(ExtentTest extentTest, SoftAssert softAssert,
-                                                     String adminEmail, String adminPassword, String userDisplayName) {
+                                                     String adminEmail, String adminPassword, String testUserEmail) {
         extentTest.log(Status.INFO, "<b>Phase 3: Admin Login and Revoke Access</b>");
         
         try {
@@ -416,16 +433,27 @@ public class UserLifecyclePage {
                 page.waitForLoadState();
                 extentTest.log(Status.INFO, "On Manage Users page for revocation");
                 
-                // Revoke user access
-                extentTest.log(Status.INFO, "Revoking access for user: " + userDisplayName);
-                manageUsersPage.revokeAccess();
+                // Revoke user access using the new flow
+                extentTest.log(Status.INFO, "Revoking access for user: " + testUserEmail);
+                
+                // Find and click the empty button (first button without text)
+                page.getByRole(AriaRole.BUTTON).filter(new Locator.FilterOptions().setHasText("")).nth(1).click();
+                page.waitForTimeout(1000);
+                
+                // Click Delete (1) button
+                page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Delete (1)")).click();
+                page.waitForTimeout(1000);
+                
+                // Confirm deletion
+                page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Delete").setExact(true)).click();
+                page.waitForTimeout(2000);
                 
                 page.waitForLoadState();
-                extentTest.log(Status.PASS, "User access revoked successfully for: " + userDisplayName);
+                extentTest.log(Status.PASS, "User access revoked successfully for: " + testUserEmail);
                 
                 // Sign out as admin
                 extentTest.log(Status.INFO, "Admin signing out");
-                page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName(userDisplayName)).click();
+                page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName(testUserEmail)).click();
                 page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Menu")).click();
                 page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Sign Out")).click();
                 page.waitForLoadState();
@@ -448,7 +476,7 @@ public class UserLifecyclePage {
      */
     private LifecycleResult executeBasicUserLifecycle(SoftAssert softAssert, String adminEmail, String adminPassword,
                                                       String testUserEmail, String testUserPassword,
-                                                      String testUserRole, String testUserDisplayName) {
+                                                      String testUserRole, String userIdentifier) {
         System.out.println("Starting User Credential Lifecycle Test (Basic Mode)");
         
         try {
@@ -466,10 +494,27 @@ public class UserLifecyclePage {
                 page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Menu")).click();
                 page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Manage Users")).click();
                 page.waitForLoadState();
-                manageUsersPage.enterUserEmail(testUserEmail);
-                manageUsersPage.selectRole(testUserRole);
-                manageUsersPage.issueCredentials();
-                page.waitForLoadState();
+                
+                // Click Create User button
+                page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Create User")).click();
+                page.waitForTimeout(1000);
+                
+                // Enter user email
+                page.getByRole(AriaRole.TEXTBOX, new Page.GetByRoleOptions().setName("user@company.com")).fill(testUserEmail);
+                
+                // Select role
+                page.locator("form").getByRole(AriaRole.BUTTON, new Locator.GetByRoleOptions().setName(testUserRole)).click();
+                page.waitForTimeout(500);
+                page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName(testUserRole)).nth(1).click();
+                
+                // Click Create User button to submit
+                page.locator("form").getByRole(AriaRole.BUTTON, new Locator.GetByRoleOptions().setName("Create User")).click();
+                page.waitForTimeout(2000);
+                
+                // Close toast notification
+                page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Close toast")).click();
+                page.waitForTimeout(1000);
+                
                 System.out.println("✅ Credentials issued successfully");
             }
             
@@ -507,8 +552,19 @@ public class UserLifecyclePage {
                 page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Menu")).click();
                 page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Manage Users")).click();
                 page.waitForLoadState();
-                manageUsersPage.revokeAccess();
-                page.waitForLoadState();
+                
+                // Find and click the empty button (first button without text)
+                page.getByRole(AriaRole.BUTTON).filter(new Locator.FilterOptions().setHasText("")).nth(1).click();
+                page.waitForTimeout(1000);
+                
+                // Click Delete (1) button
+                page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Delete (1)")).click();
+                page.waitForTimeout(1000);
+                
+                // Confirm deletion
+                page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Delete").setExact(true)).click();
+                page.waitForTimeout(2000);
+                
                 page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("C CeppHire")).click();
                 page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Menu")).click();
                 page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Sign Out")).click();
