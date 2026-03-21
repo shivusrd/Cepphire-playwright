@@ -2,10 +2,15 @@
 <!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
 <suite name="CepHire Sequential Test Suite" verbose="1" parallel="false" thread-count="1">
     
+    <!-- Global Parameters -->
+    <parameter name="runTests" value="true"/>
+    <parameter name="debugMode" value="false"/>
+    
     <!-- Test 1: Valid Login Flow in Chromium -->
-    <test name="Valid Login Flow Test - Chromium">
+    <test name="Valid Login Flow Test - Chromium" enabled="true">
         <parameter name="browser" value="chromium"/>
         <parameter name="headless" value="false"/>
+        <parameter name="runTest" value="true"/>
         <classes>
             <class name="com.cepphire.tests.CepHireLoginFlowTest">
                 <methods>
@@ -16,9 +21,10 @@
     </test>
     
     <!-- Test 2: User Credential Lifecycle in Chromium -->
-    <test name="User Credential Lifecycle Test - Chromium">
+    <test name="User Credential Lifecycle Test - Chromium" enabled="false">
         <parameter name="browser" value="chromium"/>
         <parameter name="headless" value="false"/>
+        <parameter name="runTest" value="true"/>
         <classes>
             <class name="com.cepphire.tests.UserCredentialLifecycleTest">
                 <methods>

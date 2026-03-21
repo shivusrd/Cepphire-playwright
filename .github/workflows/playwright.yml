@@ -1,4 +1,4 @@
-name: Playwright Java Tests
+name: Playwright Java Tests (Testing CepHire Turborepo Monorepo)
 
 permissions:
   contents: write
@@ -78,9 +78,11 @@ on:
     - cron: '30 17 * * *' # 11:00 PM IST (17:30 UTC)
 
 env:
+  # Testing against CepHire Turborepo Monorepo deployment
   BASE_URL: ${{ secrets.BASE_URL || 'https://cepphire.com' }}
   USER_EMAIL: ${{ secrets.USER_EMAIL }}
   USER_PASSWORD: ${{ secrets.USER_PASSWORD }}
+  # Note: This tests the deployed Turborepo monorepo application
 
 jobs:
   # Parallel execution (default for automatic triggers)
